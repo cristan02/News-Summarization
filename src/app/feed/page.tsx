@@ -308,11 +308,11 @@ export default function FeedPage() {
 
         {/* Articles Grid */}
         {filteredArticles.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
             {filteredArticles.map((article) => (
               <Card 
                 key={article.id} 
-                className="hover:shadow-lg transition-shadow cursor-pointer group"
+                className="hover:shadow-lg transition-shadow cursor-pointer group h-fit"
                 onClick={() => handleArticleClick(article.id)}
               >
                 <CardHeader className="pb-3">
@@ -325,10 +325,12 @@ export default function FeedPage() {
                 </CardHeader>
                 
                 <CardContent className="space-y-4">
-                  {/* Summary */}
-                  <p className="text-sm text-muted-foreground line-clamp-3">
-                    {article.shortSummary}
-                  </p>
+                  {/* Summary - Auto-sizing without scroll */}
+                  <div className="text-sm text-muted-foreground leading-relaxed">
+                    <p className="whitespace-pre-wrap break-words">
+                      {article.shortSummary}
+                    </p>
+                  </div>
 
                   {/* Tags */}
                   <div className="flex flex-wrap gap-1">

@@ -235,17 +235,19 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                   Summary
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-4xl w-[90vw] max-h-[80vh] backdrop-blur-md">
                 <DialogHeader>
-                  <DialogTitle className="flex items-center">
-                    <FileText className="w-5 h-5 mr-2" />
+                  <DialogTitle className="flex items-center text-xl">
+                    <FileText className="w-6 h-6 mr-3" />
                     Article Summary
                   </DialogTitle>
                 </DialogHeader>
-                <div className="mt-4">
-                  <p className="text-muted-foreground leading-relaxed">
-                    {article?.shortSummary}
-                  </p>
+                <div className="mt-6 overflow-y-auto max-h-[60vh]">
+                  <div className="bg-muted/50 rounded-lg p-6">
+                    <p className="text-base leading-relaxed whitespace-pre-wrap">
+                      {article?.shortSummary}
+                    </p>
+                  </div>
                 </div>
               </DialogContent>
             </Dialog>
@@ -316,7 +318,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                     </div>
 
                     {/* Mobile Chat Input */}
-                    <div className="flex gap-2 border-t pt-4">
+                    <div className="flex gap-2 border-t pt-4 items-center">
                       <Textarea
                         placeholder="Ask a question about this article..."
                         value={newMessage}
@@ -328,7 +330,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       <Button 
                         onClick={sendMessage} 
                         disabled={!newMessage.trim() || isChatLoading}
-                        size="sm"
+                        className="h-[40px] w-[40px] p-0"
                       >
                         <Send className="w-4 h-4" />
                       </Button>
@@ -348,7 +350,29 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             <Card>
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
-                  <CardTitle className="text-3xl">{article.title}</CardTitle>
+                  <div className="flex-1">
+                    <CardTitle className="text-3xl mb-3">{article.title}</CardTitle>
+                    
+                    {/* Tag and Source Information */}
+                    <div className="flex items-center gap-3 mb-2">
+                      {article.tag && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-muted-foreground">Topic:</span>
+                          <Badge variant="secondary" className="text-sm">
+                            {article.tag}
+                          </Badge>
+                        </div>
+                      )}
+                      {article.source && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-muted-foreground">Source:</span>
+                          <Badge variant="outline" className="text-sm">
+                            {article.source}
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                   <Button 
                     variant="outline" 
                     size="sm"
@@ -359,27 +383,19 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                   </Button>
                 </div>
                 
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="w-4 h-4" />
-                  {formatDate(article.createdAt)}
-                </div>
-              </CardHeader>
-            </Card>
-
-            {/* Tags */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Topic</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {article.tag && (
-                    <Badge key={article.tag} variant="secondary" className="text-sm">
-                      {article.tag}
-                    </Badge>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    {formatDate(article.createdAt)}
+                  </div>
+                  {article.author && (
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      <span>By {article.author}</span>
+                    </div>
                   )}
                 </div>
-              </CardContent>
+              </CardHeader>
             </Card>
 
             {/* Full Content */}
@@ -469,7 +485,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                   </div>
 
                   {/* Desktop Chat Input */}
-                  <div className="flex gap-2 border-t pt-4">
+                  <div className="flex gap-2 border-t pt-4 items-center">
                     <Textarea
                       placeholder="Ask a question about this article..."
                       value={newMessage}
@@ -481,7 +497,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                     <Button 
                       onClick={sendMessage} 
                       disabled={!newMessage.trim() || isChatLoading}
-                      size="sm"
+                      className="h-[40px] w-[40px] p-0"
                     >
                       <Send className="w-4 h-4" />
                     </Button>
