@@ -18,8 +18,7 @@ export default function HomePage() {
   // Handle redirect after authentication
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
-      // Don't auto-redirect, let user navigate manually via navbar
-      // checkUserPreferencesAndRedirect()
+      checkUserPreferencesAndRedirect()
     }
   }, [status, session])
 
@@ -89,79 +88,81 @@ export default function HomePage() {
 
   if (session) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted">
-        <div className="container mx-auto p-6 pt-8">
-          {/* Welcome Section */}
-          <Card className="mb-8">
-            <CardHeader>
-              <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 bg-gradient-to-r from-primary to-secondary rounded-2xl flex items-center justify-center">
-                  <CheckCircle className="w-8 h-8 text-primary-foreground" />
-                </div>
-                <div>
-                  <CardTitle className="text-3xl">Welcome back, {session.user?.name}!</CardTitle>
-                  <p className="text-muted-foreground mt-1">
-                    Your personalized news dashboard
-                  </p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center pb-4">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center">
+              <CheckCircle className="w-10 h-10 text-primary-foreground" />
+            </div>
+            <CardTitle className="text-2xl">Welcome Back!</CardTitle>
+          </CardHeader>
+          
+          <CardContent className="space-y-6">
+            {/* User Profile Section */}
+            <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg">
+              <div className="relative">
+                <img 
+                  src={session.user?.image || '/api/placeholder/64/64'} 
+                  alt="Profile" 
+                  className="w-16 h-16 rounded-full border-4 border-primary/20"
+                />
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-background flex items-center justify-center">
+                  <CheckCircle className="w-3 h-3 text-white" />
                 </div>
               </div>
-            </CardHeader>
-          </Card>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-semibold truncate">
+                  {session.user?.name || 'User'}
+                </h3>
+                <p className="text-sm text-muted-foreground truncate">{session.user?.email}</p>
+                <Badge variant="secondary" className="mt-1">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                  Online
+                </Badge>
+              </div>
+            </div>
 
-          {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/feed')}>
-              <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle className="w-6 h-6 text-primary" />
-                </div>
-                <h3 className="font-semibold mb-2">My News Feed</h3>
-                <p className="text-sm text-muted-foreground">
-                  Browse personalized news articles
-                </p>
-              </CardContent>
-            </Card>
+            {/* Quick Actions */}
+            <div className="space-y-3">
+              <Button
+                onClick={() => router.push('/user-preferences')}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Manage Preferences
+              </Button>
+              
+              <Button
+                onClick={() => router.push('/feed')}
+                className="w-full justify-start"
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                View News Feed
+              </Button>
+            </div>
 
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/all-feed')}>
-              <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-                  </svg>
-                </div>
-                <h3 className="font-semibold mb-2">All Articles</h3>
-                <p className="text-sm text-muted-foreground">
-                  Explore all available news articles
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/user-preferences')}>
-              <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 bg-secondary/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <Settings className="w-6 h-6 text-secondary" />
-                </div>
-                <h3 className="font-semibold mb-2">Manage Preferences</h3>
-                <p className="text-sm text-muted-foreground">
-                  Customize your interests and tags
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 bg-muted rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <Badge className="w-6 h-6" />
-                </div>
-                <h3 className="font-semibold mb-2">Statistics</h3>
-                <p className="text-sm text-muted-foreground">
-                  View your reading activity
-                </p>
-                <Badge variant="secondary" className="mt-2">Coming Soon</Badge>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+            {/* Sign Out Button */}
+            <Button
+              onClick={handleSignOut}
+              disabled={isLoading}
+              variant="destructive"
+              className="w-full"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing out...
+                </>
+              ) : (
+                <>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign out
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     )
   }

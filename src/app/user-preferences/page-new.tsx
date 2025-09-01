@@ -148,8 +148,8 @@ export default function UserPreferences() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
-      <div className="container mx-auto p-6 space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted py-6">
+      <div className="max-w-7xl mx-auto px-6 space-y-8">
         {/* Header */}
         <UserPreferencesHeader userName={session?.user?.name} />
 
@@ -207,29 +207,6 @@ export default function UserPreferences() {
                     `Save ${selectedTags.length} interests`
                   )}
                 </Button>
-              </CardContent>
-            </Card>
-
-            {/* Navigation Options */}
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-4 text-center">Ready to explore news?</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => router.push('/feed')}
-                    className="w-full"
-                  >
-                    My Personalized Feed
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => router.push('/all-feed')}
-                    className="w-full"
-                  >
-                    Browse All Articles
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           </div>
