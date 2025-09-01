@@ -4,133 +4,251 @@ const prisma = new PrismaClient()
 
 export const sampleArticles = [
   {
-    title: "Breakthrough in Quantum Computing: New Algorithm Achieves Record Performance",
-    link: "https://example.com/quantum-breakthrough",
-    content: `Researchers at MIT have developed a revolutionary quantum computing algorithm that promises to solve complex optimization problems exponentially faster than classical computers. The new algorithm, dubbed "QuantumOpt," demonstrates unprecedented performance in handling logistics, financial modeling, and machine learning tasks.
+    title: "Apple Announces Revolutionary AI Chip for Next-Generation Devices",
+    link: "https://example.com/apple-ai-chip",
+    content: `Apple has unveiled its most advanced AI processing chip, the A18 Neural, designed to power next-generation artificial intelligence applications across its device ecosystem. The new chip features a 40-core Neural Engine capable of performing 40 trillion operations per second.
 
-The breakthrough comes after years of research into quantum error correction and coherence stability. Dr. Sarah Chen, lead researcher on the project, explains that the algorithm leverages quantum superposition in a novel way to explore multiple solution paths simultaneously.
+The A18 Neural represents a significant leap in on-device AI processing, enabling real-time language translation, advanced photo editing, and personalized user experiences without relying on cloud computing. This advancement addresses growing privacy concerns while delivering unprecedented performance.
 
-"What makes QuantumOpt unique is its ability to maintain quantum coherence for extended periods while performing complex calculations," Chen stated during the announcement at the International Quantum Computing Conference.
+"We're entering a new era of personal computing where AI becomes truly personal," said CEO Tim Cook during the announcement at Apple Park. "The A18 Neural brings the power of artificial intelligence directly to your device, ensuring your data stays private while delivering incredible capabilities."
 
-The algorithm has been tested on various real-world problems, including supply chain optimization for major retailers and portfolio optimization for investment firms. In trials, it achieved solutions that were 1000x faster than the best classical algorithms while maintaining 99.7% accuracy.
+Key features of the A18 Neural include:
+- 40-core Neural Engine with 40 TOPS performance
+- Advanced machine learning accelerators
+- Improved power efficiency for all-day battery life
+- Support for large language models up to 7 billion parameters
+- Real-time video processing and enhancement
 
-Major tech companies including Google, IBM, and Amazon have already expressed interest in licensing the technology. The research team expects commercial applications to be available within the next 18 months.
+The chip will debut in the iPhone 16 Pro series, scheduled for release in early 2025. Apple has also announced plans to integrate the technology into MacBooks and iPads by mid-2025.
 
-The implications extend beyond computing efficiency. Climate modeling, drug discovery, and cryptographic security could all benefit from this advancement. The algorithm's ability to process vast datasets and identify patterns could accelerate scientific discovery across multiple fields.`,
-    shortSummary: "MIT researchers develop QuantumOpt algorithm that solves optimization problems 1000x faster than classical computers, with potential applications in logistics, finance, and scientific research.",
-    tags: ["Technology", "Quantum Computing", "MIT", "Algorithm", "Research"]
+Industry analysts predict this could shift the competitive landscape, as on-device AI processing becomes increasingly important for privacy-conscious consumers. The announcement caused Apple stock to rise 3.2% in after-hours trading.`,
+    shortSummary: "Apple unveils A18 Neural chip with 40-core Neural Engine for advanced on-device AI processing, featuring 40 TOPS performance and privacy-focused computing capabilities.",
+    tag: "apple",
+    source: "NewsAPI",
+    author: "Tech Reporter",
+    publishedAt: new Date('2024-12-15T10:00:00Z'),
+    imageUrl: "https://example.com/images/apple-ai-chip.jpg"
   },
   {
-    title: "Global Climate Summit Reaches Historic Agreement on Carbon Neutrality",
-    link: "https://example.com/climate-summit-agreement",
-    content: `World leaders at COP29 have reached a landmark agreement committing to achieve global carbon neutrality by 2045, five years ahead of previous targets. The agreement includes binding commitments from 195 countries and establishes the largest climate fund in history.
+    title: "Tesla Reports Record Quarterly Deliveries Amid Global Expansion",
+    link: "https://example.com/tesla-quarterly-deliveries",
+    content: `Tesla has reported record quarterly vehicle deliveries of 485,000 units in Q4 2024, surpassing analyst expectations and marking a 35% increase from the previous year. The milestone reflects the company's successful global expansion strategy and improved production efficiency.
 
-The $500 billion climate fund will support developing nations in their transition to renewable energy and help vulnerable communities adapt to climate change impacts. The fund represents a tripling of previous climate finance commitments.
+The record deliveries were driven by strong performance across all vehicle models, with the Model Y leading sales in the crossover segment. Tesla's Gigafactories in Shanghai, Berlin, and Texas all contributed to the production surge, with the Austin facility reaching full operational capacity.
 
-Key provisions of the agreement include:
-- Mandatory 50% emissions reduction by 2030
-- Phase-out of coal power by 2035
-- $200 billion annual investment in renewable energy infrastructure
-- Protection of 30% of global land and ocean areas
-- Establishment of a global carbon pricing mechanism
+"This quarter represents a turning point for sustainable transportation," said CEO Elon Musk in a statement. "We're not just meeting demand; we're accelerating the world's transition to sustainable energy at an unprecedented pace."
 
-UN Secretary-General António Guterres called the agreement "a turning point in human history" and emphasized the urgent need for implementation. "We have the roadmap; now we must deliver with unprecedented speed and scale," he said.
+Breakdown of Q4 2024 deliveries:
+- Model S/X: 25,000 units (+15% year-over-year)
+- Model 3/Y: 460,000 units (+37% year-over-year)
+- Cybertruck: Initial deliveries began with 2,500 units
 
-The agreement faced initial resistance from major oil-producing nations but ultimately gained unanimous support after the inclusion of a "just transition" framework that provides economic support for fossil fuel-dependent communities.
+The company also announced plans to launch the affordable Model 2 in 2025, targeting a $25,000 price point to make electric vehicles accessible to a broader market. Pre-orders for the Model 2 are expected to begin in Q2 2025.
 
-Environmental groups have cautiously welcomed the agreement while emphasizing the importance of rapid implementation. Greta Thunberg noted that "promises must now become action" and called for immediate policy changes at the national level.
+Tesla's energy division also saw significant growth, with solar panel installations increasing 40% and Powerwall deployments reaching record levels. The company's Supercharger network expanded to over 50,000 charging stations globally.
 
-Business leaders have responded positively, with many companies already announcing accelerated sustainability timelines to align with the new targets.`,
-    shortSummary: "COP29 climate summit achieves historic agreement with 195 countries committing to carbon neutrality by 2045, backed by $500 billion climate fund and binding emissions reduction targets.",
-    tags: ["Climate", "Environment", "Politics", "Global", "Sustainability"]
+Investors responded positively to the news, with Tesla shares climbing 8.5% in pre-market trading. The results position Tesla to potentially deliver over 2 million vehicles annually by 2025.`,
+    shortSummary: "Tesla achieves record Q4 2024 deliveries of 485,000 vehicles, exceeding expectations with 35% year-over-year growth and announcing plans for affordable Model 2 in 2025.",
+    tag: "tesla",
+    source: "NewsAPI",
+    author: "Business Correspondent",
+    publishedAt: new Date('2024-12-20T14:30:00Z'),
+    imageUrl: "https://example.com/images/tesla-deliveries.jpg"
   },
   {
-    title: "SpaceX Successfully Lands First Crew on Mars After 7-Month Journey",
-    link: "https://example.com/spacex-mars-landing",
-    content: `In a historic moment for space exploration, SpaceX's Starship successfully landed the first human crew on Mars after a 7-month journey from Earth. The four-person crew aboard "New Horizons" touched down in Amazonis Planitia at 14:32 UTC today.
+    title: "Breakthrough in Quantum Computing Brings Commercial Applications Closer",
+    link: "https://example.com/quantum-computing-breakthrough",
+    content: `Researchers at IBM and MIT have achieved a major breakthrough in quantum error correction, successfully maintaining quantum coherence for over 100 milliseconds in a 1000-qubit system. This advancement brings practical quantum computing applications significantly closer to reality.
 
-Commander Sarah Rodriguez, pilot Chen Wei, mission specialist Dr. James Kumar, and systems engineer Maria Santos are the first humans to set foot on another planet. The crew will spend 26 months on Mars conducting scientific research and establishing the foundation for a permanent human presence.
+The breakthrough addresses one of quantum computing's biggest challenges: quantum decoherence, where quantum states become unstable and lose their computational advantages. The new error correction protocol uses machine learning algorithms to predict and prevent errors before they occur.
 
-The mission, designated Artemis-Mars 1, launched from SpaceX's Starbase facility in Texas seven months ago. The journey included a complex trajectory using gravity assists from Venus and Earth to minimize fuel consumption and travel time.
+"This is the moment quantum computing transitions from laboratory curiosity to practical tool," said Dr. Sarah Chen, lead researcher at IBM Quantum. "We're now seeing quantum advantage in real-world problems that matter to businesses and society."
 
-"This is a giant leap not just for SpaceX, but for all of humanity," said Elon Musk during the live broadcast. "Today we become a truly multi-planetary species."
+The achievement enables quantum computers to run complex algorithms for extended periods, opening doors to applications in:
+- Drug discovery and molecular simulation
+- Financial modeling and risk analysis
+- Climate modeling and weather prediction
+- Cryptography and cybersecurity
+- Supply chain optimization
 
-The crew's primary objectives include:
-- Establishing a sustainable habitat using in-situ resource utilization
-- Conducting geological surveys to understand Mars' history
-- Searching for signs of past or present microbial life
-- Testing life support systems for future permanent settlements
-- Preparing landing sites for cargo missions arriving in 2026
+IBM announced that its quantum cloud service will offer access to the new error-corrected systems starting in Q2 2025. Early partners include pharmaceutical companies working on drug discovery and financial institutions developing quantum-enhanced trading algorithms.
 
-The mission utilizes SpaceX's revolutionary closed-loop life support system, which recycles 98% of water and oxygen. Solar panels and a small nuclear reactor provide power for the habitat and scientific equipment.
+The milestone represents years of collaborative research between academic institutions and technology companies. The quantum error correction breakthrough could accelerate the timeline for quantum advantage across multiple industries by 3-5 years.
 
-NASA Administrator Bill Nelson praised the achievement, noting the international collaboration that made the mission possible. The crew includes expertise from NASA, ESA, and private space companies.
-
-Earth-Mars communication delay is currently 14 minutes, making real-time mission control impossible. The crew operates with significant autonomy while following detailed mission protocols developed over the past decade.`,
-    shortSummary: "SpaceX achieves historic milestone as four-person crew successfully lands on Mars after 7-month journey, beginning 26-month mission to establish foundation for permanent human presence.",
-    tags: ["Space", "Mars", "SpaceX", "Exploration", "Science"]
+Major technology companies including Google, Microsoft, and Amazon have announced increased investments in quantum computing research following the breakthrough. The global quantum computing market is projected to reach $125 billion by 2030.`,
+    shortSummary: "IBM and MIT achieve quantum computing breakthrough with 100ms coherence in 1000-qubit system, bringing commercial quantum applications closer to reality through advanced error correction.",
+    tag: "quantum-computing",
+    source: "NewsAPI",
+    author: "Science Reporter",
+    publishedAt: new Date('2024-12-18T16:45:00Z'),
+    imageUrl: "https://example.com/images/quantum-computing.jpg"
   },
   {
-    title: "Revolutionary Gene Therapy Cures Type 1 Diabetes in Clinical Trial",
-    link: "https://example.com/gene-therapy-diabetes",
-    content: `A groundbreaking gene therapy treatment has successfully cured Type 1 diabetes in 90% of participants in a Phase III clinical trial, offering hope to millions of patients worldwide. The treatment, developed by biotech company GeneLife Therapeutics, reprograms the patient's own cells to produce insulin.
+    title: "Global Climate Fund Reaches $500 Billion Milestone for Renewable Energy",
+    link: "https://example.com/climate-fund-milestone",
+    content: `The International Climate Finance Initiative has successfully raised $500 billion in commitments for renewable energy projects worldwide, surpassing its 2025 target one year ahead of schedule. The fund represents the largest coordinated effort to combat climate change through clean energy investment.
 
-The therapy uses CRISPR-Cas9 gene editing technology to modify liver cells, converting them into insulin-producing beta cells that respond to blood glucose levels. Unlike traditional treatments requiring daily insulin injections, the gene therapy provides a one-time cure.
+The milestone was announced at the World Economic Forum in Davos, with contributions from 195 countries, multilateral development banks, and private investors. The fund will finance solar, wind, hydroelectric, and emerging clean energy technologies across developing and developed nations.
 
-"We're witnessing a medical revolution," said Dr. Patricia Williams, lead investigator at Johns Hopkins Medical Center. "Patients who have lived with diabetes for decades are now producing their own insulin naturally."
+"Today marks a turning point in our fight against climate change," said UN Climate Chief Patricia Espinosa. "This unprecedented level of financial commitment demonstrates global unity in transitioning to a sustainable energy future."
 
-The trial followed 200 patients aged 18-65 with Type 1 diabetes for 24 months. Results showed:
-- 180 patients (90%) achieved normal blood glucose without medication
-- 15 patients (7.5%) reduced insulin requirements by 80%
-- 5 patients (2.5%) showed no improvement
+The fund allocation includes:
+- $200 billion for solar energy projects in developing countries
+- $150 billion for offshore wind farms globally
+- $75 billion for grid modernization and energy storage
+- $50 billion for emerging technologies like green hydrogen
+- $25 billion for climate adaptation and resilience projects
+
+Priority regions include sub-Saharan Africa, Southeast Asia, and Latin America, where renewable energy access remains limited. The fund aims to provide electricity to 1 billion people currently without reliable power access.
+
+Major commitments came from developed nations, with the United States contributing $100 billion, the European Union $120 billion, and China $80 billion. Private sector participation exceeded expectations, with technology companies and financial institutions providing over $150 billion.
+
+The initiative includes ambitious targets: achieving 70% renewable energy globally by 2030 and complete decarbonization of the electricity sector by 2040. Early projects are already underway, with the first solar installations beginning in Kenya and Bangladesh.
+
+Environmental groups praised the announcement while emphasizing the need for rapid implementation and transparent monitoring of fund utilization.`,
+    shortSummary: "International Climate Finance Initiative reaches $500 billion milestone for global renewable energy projects, with commitments from 195 countries targeting 70% renewable energy by 2030.",
+    tag: "climate-change",
+    source: "NewsAPI",
+    author: "Environment Correspondent",
+    publishedAt: new Date('2024-12-22T11:20:00Z'),
+    imageUrl: "https://example.com/images/climate-fund.jpg"
+  },
+  {
+    title: "SpaceX Successfully Completes First Commercial Mars Cargo Mission",
+    link: "https://example.com/spacex-mars-cargo",
+    content: `SpaceX has successfully completed its first commercial cargo mission to Mars, delivering 100 tons of supplies and equipment to the Mars Base Alpha research station. The mission marks a significant milestone in establishing permanent human presence on the Red Planet.
+
+The cargo mission, launched 18 months ago during the optimal Earth-Mars transfer window, included life support equipment, scientific instruments, solar panels, and construction materials for expanding the Mars base. The successful delivery demonstrates the viability of regular cargo runs to support Mars colonization.
+
+"This mission proves that interplanetary commerce is no longer science fiction," said SpaceX CEO Elon Musk. "We're building the infrastructure for a multi-planetary civilization, one cargo shipment at a time."
+
+The delivered cargo includes:
+- Advanced life support systems for 50 additional crew members
+- Mining equipment for water extraction and fuel production
+- Laboratory equipment for biological and geological research
+- Construction robots for autonomous base expansion
+- Emergency supplies including food, medicine, and spare parts
+
+The mission utilized SpaceX's heavy-lift Starship vehicle, specifically designed for Mars transport. The spacecraft successfully landed at Mars Base Alpha using precision guidance systems, despite challenging dust storm conditions.
+
+Mars Base Alpha, established in 2024, currently houses 12 researchers conducting long-term studies on Mars geology, climate, and potential for terraforming. The base serves as a testbed for technologies needed for permanent Mars settlements.
+
+The successful cargo delivery has attracted interest from multiple organizations planning Mars missions. NASA has contracted SpaceX for three additional cargo missions, while private research institutions and mining companies are exploring opportunities for Mars-based operations.
+
+Future cargo missions will focus on delivering heavy industrial equipment for fuel production and mining operations. SpaceX plans to launch cargo missions every 26 months during optimal transfer windows, with the goal of establishing a self-sustaining Mars economy by 2035.`,
+    shortSummary: "SpaceX completes first commercial Mars cargo mission, delivering 100 tons of supplies to Mars Base Alpha and demonstrating viability of regular interplanetary commerce.",
+    tag: "space-exploration",
+    source: "NewsAPI",
+    author: "Space Correspondent",
+    publishedAt: new Date('2024-12-25T09:15:00Z'),
+    imageUrl: "https://example.com/images/spacex-mars.jpg"
+  },
+  {
+    title: "Major Cybersecurity Firms Report 300% Increase in AI-Powered Attacks",
+    link: "https://example.com/ai-cybersecurity-attacks",
+    content: `Leading cybersecurity companies report a 300% increase in artificial intelligence-powered cyberattacks over the past year, marking a significant evolution in the threat landscape. The attacks use machine learning to adapt in real-time and bypass traditional security measures.
+
+The surge in AI-powered attacks includes sophisticated phishing campaigns, automated vulnerability exploitation, and deepfake-enabled social engineering. Cybercriminals are leveraging readily available AI tools to scale their operations and improve success rates.
+
+"We're witnessing the weaponization of artificial intelligence," said Dr. Michael Rodriguez, Chief Security Officer at CyberDefense Global. "Traditional signature-based security is becoming obsolete against these adaptive threats."
+
+Common AI-powered attack methods include:
+- Automated spear-phishing with personalized content generation
+- Real-time password cracking using neural networks
+- Deepfake voice calls for CEO fraud and social engineering
+- AI-generated malware that evolves to evade detection
+- Automated network reconnaissance and exploitation
+
+The financial sector has been particularly targeted, with AI attacks on banking systems increasing 450% year-over-year. Healthcare and critical infrastructure have also seen significant increases in sophisticated attacks.
+
+In response, cybersecurity firms are deploying AI-powered defense systems that can learn and adapt to new threats in real-time. The global cybersecurity market is projected to grow by 35% annually as organizations upgrade their defenses.
+
+Government agencies are developing new regulations for AI security, including mandatory reporting of AI-powered attacks and requirements for AI-resistant security measures in critical infrastructure.
+
+Organizations are advised to implement zero-trust security models, regular security training with AI-aware components, and advanced threat detection systems capable of identifying AI-generated attacks.
+
+The cybersecurity skills shortage has intensified as demand for AI-security expertise grows. Universities and training programs are rapidly developing specialized curricula to address the emerging threat landscape.`,
+    shortSummary: "Cybersecurity firms report 300% surge in AI-powered cyberattacks, with criminals using machine learning for adaptive phishing, malware, and social engineering campaigns.",
+    tag: "cybersecurity",
+    source: "NewsAPI",
+    author: "Security Analyst",
+    publishedAt: new Date('2024-12-28T13:40:00Z'),
+    imageUrl: "https://example.com/images/ai-cybersecurity.jpg"
+  },
+  {
+    title: "Cryptocurrency Market Reaches New High as Bitcoin Surpasses $120,000",
+    link: "https://example.com/bitcoin-120k-milestone",
+    content: `Bitcoin has reached a historic milestone, surpassing $120,000 per coin for the first time, driven by increased institutional adoption and growing acceptance of cryptocurrency as a legitimate asset class. The surge represents a 400% increase from last year's lows.
+
+The rally was fueled by several major developments: approval of Bitcoin ETFs in multiple countries, adoption by sovereign wealth funds, and integration of cryptocurrency payments by major corporations. Institutional investors now hold over 15% of the total Bitcoin supply.
+
+"We're witnessing the maturation of cryptocurrency from speculative asset to institutional-grade investment," said Jennifer Park, CEO of Crypto Analytics. "The infrastructure and regulatory clarity have finally caught up with the technology's potential."
+
+Key drivers of the price surge include:
+- US Federal Reserve's favorable regulatory framework
+- Adoption by pension funds and endowments
+- Corporate treasury allocation by Fortune 500 companies
+- Growing acceptance in emerging markets
+- Technical improvements in Bitcoin network efficiency
+
+The cryptocurrency market's total value has exceeded $5 trillion, with Bitcoin maintaining its dominant 45% market share. Ethereum and other altcoins have also seen significant gains, though none have matched Bitcoin's percentage increases.
+
+Major corporations including Microsoft, Apple, and JPMorgan have announced plans to add Bitcoin to their treasury reserves. Several central banks are exploring Bitcoin as a reserve asset alongside traditional currencies.
+
+The price milestone has renewed discussions about Bitcoin's role in the global financial system. Proponents argue it provides protection against inflation and currency devaluation, while critics express concerns about volatility and environmental impact.
+
+Mining operations have evolved to become predominantly renewable energy-powered, addressing environmental concerns that previously limited institutional adoption. Over 75% of Bitcoin mining now uses renewable energy sources.
+
+Financial advisors are recommending allocation of 5-10% of portfolios to cryptocurrency, marking a significant shift from previous skepticism about digital assets.`,
+    shortSummary: "Bitcoin reaches historic $120,000 milestone driven by institutional adoption, regulatory clarity, and corporate treasury allocation, with crypto market value exceeding $5 trillion.",
+    tag: "cryptocurrency",
+    source: "NewsAPI",
+    author: "Financial Reporter",
+    publishedAt: new Date('2024-12-30T10:25:00Z'),
+    imageUrl: "https://example.com/images/bitcoin-120k.jpg"
+  },
+  {
+    title: "Medical Breakthrough: Gene Therapy Successfully Treats Alzheimer's Disease",
+    link: "https://example.com/alzheimers-gene-therapy",
+    content: `A revolutionary gene therapy treatment has shown remarkable success in treating Alzheimer's disease, with 85% of patients in Phase III clinical trials showing significant cognitive improvement. The treatment represents the first potential cure for the degenerative brain disease.
+
+The therapy, developed by BioGenesis Therapeutics, uses modified viruses to deliver protective genes directly to brain cells affected by Alzheimer's. The treatment targets amyloid plaques and tau tangles, the hallmark characteristics of the disease.
+
+"This is the breakthrough we've been working toward for decades," said Dr. Patricia Williams, lead researcher at Johns Hopkins Medical Center. "For the first time, we're not just slowing Alzheimer's progression—we're actually reversing it."
+
+The treatment protocol involves:
+- Single injection of modified viral vectors into the cerebrospinal fluid
+- Genes that produce protective proteins for brain cells
+- Clearance of toxic amyloid and tau proteins
+- Restoration of synaptic connections between neurons
+- Improvement in memory formation and retrieval
+
+Clinical trial results showed dramatic improvements:
+- 85% of patients showed cognitive improvement within 6 months
+- 70% returned to pre-disease functioning levels
+- Memory test scores improved by an average of 65%
+- Brain scans showed reduced amyloid plaques in 90% of patients
 - No serious adverse effects were reported
 
-The treatment involves a single IV infusion of modified viral vectors carrying the therapeutic genes. The vectors specifically target liver cells, avoiding off-target effects in other organs. Patients begin producing insulin within 2-4 weeks of treatment.
+The therapy is most effective in early-stage Alzheimer's but has shown promise even in moderate cases. Researchers are optimistic about treating other neurodegenerative diseases using similar approaches.
 
-Twenty-eight-year-old trial participant Mark Thompson shared his experience: "I was diagnosed at age 12 and have given myself over 20,000 insulin injections. Three months after the gene therapy, my pancreas function tests show I'm producing insulin like someone without diabetes."
+The FDA has granted breakthrough therapy designation, potentially accelerating approval to within 12 months. European and Asian regulatory agencies have begun review processes for international approval.
 
-The FDA has granted breakthrough therapy designation, potentially accelerating approval to within 12 months. The company expects to file for regulatory approval in Q2 2025.
+Patient advocacy groups have hailed the development as a game-changer for the 55 million people worldwide living with dementia. The treatment could reduce healthcare costs by trillions of dollars over the next decade.
 
-Cost remains a concern, with estimates suggesting the treatment could cost $500,000-$1,000,000 per patient. However, analysts note this could be cost-effective compared to lifetime diabetes management costs exceeding $300,000.
-
-International regulatory agencies in Europe and Canada have begun reviewing preliminary data for potential approval.`,
-    shortSummary: "Revolutionary CRISPR gene therapy achieves 90% cure rate for Type 1 diabetes in clinical trial, reprogramming liver cells to produce insulin and potentially eliminating need for daily injections.",
-    tags: ["Medicine", "Gene Therapy", "Diabetes", "CRISPR", "Healthcare"]
-  },
-  {
-    title: "Major Cybersecurity Breach Affects 500 Million Users Across Multiple Platforms",
-    link: "https://example.com/cybersecurity-breach",
-    content: `A sophisticated cyber attack has compromised personal data of over 500 million users across multiple social media and e-commerce platforms in what security experts are calling one of the largest data breaches in history. The attack, discovered early Tuesday morning, affected platforms including several major social networks, online retailers, and financial services.
-
-The breach was carried out by an advanced persistent threat (APT) group using a zero-day vulnerability in widely-used cloud infrastructure software. The attackers gained access to user databases containing names, email addresses, phone numbers, and in some cases, encrypted passwords and payment information.
-
-"This attack demonstrates unprecedented sophistication and coordination," said cybersecurity expert Dr. Michael Rodriguez from the Cybersecurity and Infrastructure Security Agency (CISA). "The attackers exploited a previously unknown vulnerability that has since been patched."
-
-Affected companies have begun notifying users and implementing additional security measures:
-- Mandatory password resets for all affected accounts
-- Enhanced two-factor authentication requirements
-- Credit monitoring services for users whose financial data was accessed
-- Collaboration with law enforcement agencies
-
-The breach timeline reveals the attack began three weeks ago but remained undetected due to sophisticated methods used to mask the intrusion. The hackers used legitimate administrative tools and mimicked normal user behavior to avoid triggering security alerts.
-
-"What's particularly concerning is the attackers' ability to remain hidden for an extended period," noted cybersecurity firm SecureNet's CEO Jennifer Park. "This suggests nation-state level capabilities and resources."
-
-No evidence has been found of credit card numbers or Social Security numbers being accessed, as this data is stored separately with additional encryption layers. However, users are advised to monitor their accounts closely and enable all available security features.
-
-The incident has renewed calls for stronger federal cybersecurity regulations and mandatory breach notification requirements. Several congressional committees have announced investigations into the companies' security practices.
-
-Stock prices for affected companies fell 5-15% in after-hours trading as investors assessed potential legal and regulatory consequences. The companies face potential fines under GDPR and other international privacy regulations.
-
-Users can check if their accounts were affected by visiting the companies' security notification pages and are encouraged to use unique passwords and multi-factor authentication for all online accounts.`,
-    shortSummary: "Sophisticated cyber attack compromises 500 million user accounts across multiple platforms using zero-day vulnerability, marking one of the largest data breaches in history with widespread implications for online security.",
-    tags: ["Cybersecurity", "Data Breach", "Privacy", "Technology", "Security"]
+BioGenesis Therapeutics plans to make the treatment widely available through partnerships with healthcare systems globally, with a focus on ensuring accessibility in developing countries.`,
+    shortSummary: "Revolutionary gene therapy shows 85% success rate in Phase III Alzheimer's trials, representing first potential cure by targeting amyloid plaques and restoring brain function.",
+    tag: "medical-research",
+    source: "NewsAPI",
+    author: "Medical Correspondent",
+    publishedAt: new Date('2024-12-27T15:10:00Z'),
+    imageUrl: "https://example.com/images/alzheimers-therapy.jpg"
   }
 ]
 
 export async function seedArticles() {
   try {
-    console.log('Starting to seed articles...')
+    console.log('Starting to seed articles with single-tag structure...')
     
     for (const article of sampleArticles) {
       await prisma.article.upsert({
@@ -141,11 +259,25 @@ export async function seedArticles() {
           title: article.title,
           content: article.content,
           shortSummary: article.shortSummary,
-          tags: article.tags
+          tag: article.tag,
+          source: article.source,
+          author: article.author,
+          publishedAt: article.publishedAt,
+          imageUrl: article.imageUrl
         },
-        create: article
+        create: {
+          title: article.title,
+          link: article.link,
+          content: article.content,
+          shortSummary: article.shortSummary,
+          tag: article.tag,
+          source: article.source || "Seed Data",
+          author: article.author || "Unknown",
+          publishedAt: article.publishedAt || new Date(),
+          imageUrl: article.imageUrl
+        }
       })
-      console.log(`Upserted article: ${article.title}`)
+      console.log(`Upserted article: ${article.title} (Tag: ${article.tag})`)
     }
     
     console.log('Successfully seeded all articles!')

@@ -27,6 +27,8 @@ export default function UserPreferences() {
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
+  const [isFetching, setIsFetching] = useState(false)
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/')
@@ -134,6 +136,34 @@ export default function UserPreferences() {
     }
   }
 
+  const handleFetchArticles = async () => {
+    if (selectedTags.length === 0) {
+      toast.error("Please select at least one tag first")
+      return
+    }
+
+    setIsFetching(true)
+    try {
+      const response = await fetch('/api/articles/fetch-external', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tags: selectedTags, limit: 20 })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        toast.success(`Successfully fetched ${data.articles?.length || 0} new articles!`)
+      } else {
+        toast.error("Failed to fetch articles")
+      }
+    } catch (error) {
+      console.error('Error fetching articles:', error)
+      toast.error("Error fetching articles")
+    } finally {
+      setIsFetching(false)
+    }
+  }
+
   if (status === 'loading' || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted">
@@ -189,9 +219,9 @@ export default function UserPreferences() {
               </CardContent>
             </Card>
 
-            {/* Save Button */}
+            {/* Action Buttons */}
             <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-6 space-y-3">
                 <Button
                   onClick={handleSavePreferences}
                   disabled={selectedTags.length === 0 || isSaving}
@@ -207,29 +237,29 @@ export default function UserPreferences() {
                     `Save ${selectedTags.length} interests`
                   )}
                 </Button>
-              </CardContent>
-            </Card>
-
-            {/* Navigation Options */}
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-4 text-center">Ready to explore news?</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => router.push('/feed')}
-                    className="w-full"
-                  >
-                    My Personalized Feed
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => router.push('/all-feed')}
-                    className="w-full"
-                  >
-                    Browse All Articles
-                  </Button>
-                </div>
+                
+                <Button
+                  onClick={handleFetchArticles}
+                  disabled={selectedTags.length === 0 || isFetching}
+                  variant="outline"
+                  className="w-full"
+                  size="lg"
+                >
+                  {isFetching ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Fetching Articles...
+                    </>
+                  ) : (
+                    `Fetch Latest Articles for ${selectedTags.length} interests`
+                  )}
+                </Button>
+                
+                {selectedTags.length > 0 && (
+                  <p className="text-sm text-muted-foreground text-center">
+                    This will fetch the latest news articles based on your selected interests
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>

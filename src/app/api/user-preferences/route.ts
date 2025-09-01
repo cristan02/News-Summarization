@@ -12,10 +12,13 @@ export async function GET() {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    // Check if user has preferences
+    // Get user with their preferred tags
     const user = await prisma.user.findFirst({
       where: { email: session.user.email },
-      include: { preferences: true }
+      select: {
+        id: true,
+        preferredTags: true
+      }
     })
 
     if (!user) {
@@ -23,9 +26,15 @@ export async function GET() {
     }
 
     return NextResponse.json({
-      hasPreferences: !!user.preferences,
+      hasPreferences: user.preferredTags.length > 0,
       userId: user.id,
-      preferences: user.preferences
+      preferences: {
+        id: user.id,
+        userId: user.id,
+        preferredTags: user.preferredTags,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
     })
   } catch (error) {
     console.error('Error checking user preferences:', error)
@@ -57,19 +66,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Create or update preferences
-    const preferences = await prisma.userPreferences.upsert({
-      where: { userId: user.id },
-      create: {
-        userId: user.id,
-        preferredTags
+    // Update user's preferred tags directly
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        preferredTags: preferredTags
       },
-      update: {
-        preferredTags
+      select: {
+        id: true,
+        preferredTags: true,
+        updatedAt: true
       }
     })
 
-    return NextResponse.json(preferences)
+    return NextResponse.json({
+      id: updatedUser.id,
+      userId: updatedUser.id,
+      preferredTags: updatedUser.preferredTags,
+      createdAt: new Date().toISOString(),
+      updatedAt: updatedUser.updatedAt.toISOString()
+    })
   } catch (error) {
     console.error('Error saving preferences:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -16,7 +16,11 @@ interface Article {
   link: string
   content: string
   shortSummary: string
-  tags: string[]
+  tag: string // Single tag instead of array
+  source?: string
+  author?: string
+  publishedAt?: string
+  imageUrl?: string
   createdAt: string
   updatedAt: string
 }
@@ -70,12 +74,12 @@ export default function AllFeedPage() {
       filtered = filtered.filter(article =>
         article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         article.shortSummary.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        article.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+        article.tag.toLowerCase().includes(searchQuery.toLowerCase())
       )
     }
 
     if (selectedTag) {
-      filtered = filtered.filter(article => article.tags.includes(selectedTag))
+      filtered = filtered.filter(article => article.tag === selectedTag)
     }
 
     setFilteredArticles(filtered)
@@ -84,7 +88,7 @@ export default function AllFeedPage() {
   const getAllTags = () => {
     const tagSet = new Set<string>()
     articles.forEach(article => {
-      article.tags.forEach(tag => tagSet.add(tag))
+      tagSet.add(article.tag)
     })
     return Array.from(tagSet).sort()
   }
@@ -231,22 +235,29 @@ export default function AllFeedPage() {
 
                   {/* Tags */}
                   <div className="flex flex-wrap gap-1">
-                    {article.tags.slice(0, 3).map((tag) => (
-                      <Badge key={tag} variant="secondary" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                    {article.tags.length > 3 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{article.tags.length - 3} more
-                      </Badge>
-                    )}
+                    <Badge 
+                      variant={selectedTag === article.tag ? "default" : "secondary"} 
+                      className="text-xs cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelectedTag(selectedTag === article.tag ? null : article.tag)
+                      }}
+                    >
+                      {article.tag}
+                    </Badge>
                   </div>
 
-                  {/* Date */}
-                  <div className="flex items-center text-xs text-muted-foreground">
-                    <Clock className="w-3 h-3 mr-1" />
-                    {formatDate(article.createdAt)}
+                  {/* Source and Date */}
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <div className="flex items-center">
+                      <Clock className="w-3 h-3 mr-1" />
+                      {formatDate(article.publishedAt || article.createdAt)}
+                    </div>
+                    {article.source && (
+                      <span className="text-xs bg-muted px-2 py-1 rounded">
+                        {article.source}
+                      </span>
+                    )}
                   </div>
                 </CardContent>
               </Card>

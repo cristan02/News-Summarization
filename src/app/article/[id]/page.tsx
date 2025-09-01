@@ -30,7 +30,11 @@ interface Article {
   link: string
   content: string
   shortSummary: string
-  tags: string[]
+  tag: string // Single tag instead of array
+  source?: string
+  author?: string
+  publishedAt?: string
+  imageUrl?: string
   createdAt: string
   updatedAt: string
 }
@@ -365,15 +369,15 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
             {/* Tags */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Topics</CardTitle>
+                <CardTitle className="text-lg">Topic</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {article.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-sm">
-                      {tag}
+                  {article.tag && (
+                    <Badge key={article.tag} variant="secondary" className="text-sm">
+                      {article.tag}
                     </Badge>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>

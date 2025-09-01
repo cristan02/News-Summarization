@@ -95,7 +95,7 @@ export default function HomePage() {
           <Card className="mb-8">
             <CardHeader>
               <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 bg-gradient-to-r from-primary to-secondary rounded-2xl flex items-center justify-center">
+                <div className="w-16 h-16 bg-gradient-to-r from-primary/80 to-primary/50 rounded-2xl flex items-center justify-center">
                   <CheckCircle className="w-8 h-8 text-primary-foreground" />
                 </div>
                 <div>
@@ -109,7 +109,7 @@ export default function HomePage() {
           </Card>
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/feed')}>
               <CardContent className="p-6 text-center">
                 <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-4">
@@ -138,8 +138,8 @@ export default function HomePage() {
 
             <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/user-preferences')}>
               <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 bg-secondary/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <Settings className="w-6 h-6 text-secondary" />
+                <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <Settings className="w-6 h-6 text-primary" />
                 </div>
                 <h3 className="font-semibold mb-2">Manage Preferences</h3>
                 <p className="text-sm text-muted-foreground">
@@ -148,18 +148,6 @@ export default function HomePage() {
               </CardContent>
             </Card>
 
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 bg-muted rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <Badge className="w-6 h-6" />
-                </div>
-                <h3 className="font-semibold mb-2">Statistics</h3>
-                <p className="text-sm text-muted-foreground">
-                  View your reading activity
-                </p>
-                <Badge variant="secondary" className="mt-2">Coming Soon</Badge>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>

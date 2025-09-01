@@ -46,8 +46,8 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  // User preferences
-  preferences UserPreferences?
+  // User preferences - moved directly into User table
+  preferredTags String[] @default([]) // Tags that user is interested in
 
   @@map("users")
 }
@@ -68,13 +68,18 @@ model Article {
   link            String   @unique
   content         String   // Entire article text
   shortSummary    String   // Short summary of the article
-  tags            String[] // Array of tags
-  vectorEmbedding Float[]  // Vector embeddings for similarity search
+  tag             String   // Single tag for the article (matches a tag from Tag model)
+  source          String?  // News source (e.g., "NewsAPI", "Guardian API")
+  author          String?  // Article author
+  publishedAt     DateTime? // Original publication date
+  imageUrl        String?  // Article image URL
+  vectorEmbedding Float[]  @default([]) // Vector embeddings for similarity search
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   @@map("articles")
-  @@index([tags])
+  @@index([tag])
+  @@index([publishedAt])
 }
 
 // Tags Model - Master list of all available tags
@@ -87,18 +92,4 @@ model Tag {
   updatedAt   DateTime @updatedAt
 
   @@map("tags")
-}
-
-// User Preferences Model
-model UserPreferences {
-  id               String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId           String   @unique @db.ObjectId
-  preferredTags    String[] // Tags that user is interested in (references Tag.name)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("user_preferences")
 }

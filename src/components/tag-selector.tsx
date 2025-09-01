@@ -19,7 +19,7 @@ export function TagSelector({ tags, selectedTags, onTagToggle, className }: TagS
   return (
     <div className={cn("space-y-4", className)}>
       <h2 className="text-xl font-semibold text-foreground">Choose Your Interests</h2>
-      <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+      <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-[--grid-fluid] gap-3">
         {tags.map(tag => (
           <Button
             key={tag.id}

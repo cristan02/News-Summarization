@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
@@ -11,9 +11,33 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { searchParams } = new URL(request.url)
+    const tag = searchParams.get('tag')
+
+    let whereClause = {}
+    if (tag) {
+      whereClause = { tag: tag }
+    }
+
     const articles = await prisma.article.findMany({
-      orderBy: {
-        createdAt: 'desc'
+      where: whereClause,
+      orderBy: [
+        { publishedAt: 'desc' },
+        { createdAt: 'desc' }
+      ],
+      select: {
+        id: true,
+        title: true,
+        link: true,
+        content: true,
+        shortSummary: true,
+        tag: true,
+        source: true,
+        author: true,
+        publishedAt: true,
+        imageUrl: true,
+        createdAt: true,
+        updatedAt: true
       }
     })
 

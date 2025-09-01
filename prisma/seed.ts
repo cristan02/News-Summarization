@@ -1,5 +1,6 @@
 import { seedInitialTags } from '@/lib/seed-tags'
 import { seedArticles } from '@/lib/seed-articles'
+import { seedDefaultUser } from '@/lib/seed-default-user'
 
 async function main() {
   console.log('🌱 Starting database seeding...')
@@ -12,6 +13,10 @@ async function main() {
     console.log('Seeding articles...')
     await seedArticles()
     console.log('✅ Articles seeded successfully!')
+    
+    console.log('Seeding default user...')
+    await seedDefaultUser()
+    console.log('✅ Default user seeded successfully!')
     
     console.log('🎉 All seeding completed successfully!')
   } catch (error) {
