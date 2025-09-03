@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { fetchArticlesWithFallback } from '@/lib/news-fetcher';
+import { ensureArticleChunks } from '@/lib/chunk-embed';
 
 // Security check for cron jobs
 function verifyCronSecret(request: NextRequest): boolean {
@@ -109,8 +110,13 @@ export async function GET(request: NextRequest) {
           }
         });
 
-        // Log content length for debugging
-        console.log(`Saved article: "${article.title}" - Content length: ${article.content?.length || 0} characters`);
+        // Generate chunks & embeddings
+        try {
+          const chunkResult = await ensureArticleChunks(prisma, savedArticle, { chunkSize: 1200, overlap: 150 });
+          console.log(`Saved article: "${article.title}" - Content length: ${article.content?.length || 0} chars; Chunks created: ${chunkResult.created}${chunkResult.skippedExisting ? ' (skipped existing)' : ''}`);
+        } catch (chunkErr) {
+          console.error(`Failed chunking article "${article.title}":`, chunkErr);
+        }
         savedArticles.push(savedArticle);
 
       } catch (error) {

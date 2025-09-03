@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { fetchArticlesWithFallback } from '@/lib/news-fetcher';
+import { ensureArticleChunks } from '@/lib/chunk-embed';
 
 async function executeDailyNewsFetch() {
   console.log('Starting manual daily news fetch job...');
@@ -92,8 +93,14 @@ async function executeDailyNewsFetch() {
         }
       });
 
+      // Generate chunks & embeddings for this article
+      try {
+        const chunkResult = await ensureArticleChunks(prisma, savedArticle, { chunkSize: 1200, overlap: 150 });
+        console.log(`Saved article: ${article.title} | Chunks: ${chunkResult.created}${chunkResult.skippedExisting ? ' (skipped existing)' : ''}`);
+      } catch (chunkErr) {
+        console.error(`Failed chunking article "${article.title}":`, chunkErr);
+      }
       savedArticles.push(savedArticle);
-      console.log(`Saved article: ${article.title}`);
 
     } catch (error) {
       console.error(`Error saving article "${article.title}":`, error);
