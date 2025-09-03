@@ -57,8 +57,10 @@ export async function GET(request: NextRequest) {
 
     console.log(`Fetching articles for ${searchQueries.length} tags from database...`);
 
-    // Fetch articles with fallback logic - adjust articles per tag based on number of tags
-    const articlesPerTag = Math.max(3, Math.floor(40 / searchQueries.length)); // Aim for ~40 total articles
+    // Fixed articles per tag (no dynamic calculation to avoid confusion)
+    const articlesPerTag = 2; // Set to your desired limit
+    
+    console.log(`Configured to fetch ${articlesPerTag} articles per tag (${searchQueries.length} tags = max ${articlesPerTag * searchQueries.length} articles)`);
     
     // Pass all existing tag names to the fetcher for better categorization
     const existingTagNames = tags.map(tag => tag.name);

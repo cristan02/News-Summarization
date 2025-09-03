@@ -73,20 +73,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
       return
     }
     
-    if (status === 'authenticated' && articleId) {
-      fetchArticle()
-    }
-  }, [status, router, articleId])
-
-  useEffect(() => {
-    scrollToBottom()
-  }, [chatMessages])
-
-  const scrollToBottom = () => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  const fetchArticle = async () => {
+      const fetchArticle = async () => {
     setIsLoading(true)
     try {
       const response = await fetch(`/api/articles/${articleId}`)
@@ -112,6 +99,19 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     } finally {
       setIsLoading(false)
     }
+  }
+  
+    if (status === 'authenticated' && articleId) {
+      fetchArticle()
+    }
+  }, [status, router, articleId])
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [chatMessages])
+
+  const scrollToBottom = () => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
   const sendMessage = async () => {

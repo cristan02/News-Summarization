@@ -313,7 +313,7 @@ function cleanNewsArticleContent(content: string): string {
   if (!content) return '';
   
   // Only remove obvious navigation/footer content, preserve article text
-  let cleaned = content
+const cleaned = content
     .replace(/^.*?Skip to content\s*/i, '') // Remove everything before "Skip to content"
     .replace(/\s*Tags:\s*.*$/gim, '') // Remove tags section at end
     .replace(/\s*Copyright.*$/gim, '') // Remove copyright at end
@@ -356,7 +356,7 @@ export async function fetchFromGNews(query: string, limit: number = 10, existing
       throw new Error('GNews API key not found');
     }
 
-    const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(query)}&token=${apiKey}&lang=en&country=us&max=${limit}`;
+    const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(query)}&token=${apiKey}&lang=en&country=us&max=${limit}&sortby=publishedAt`;
     
     const response = await fetch(url, {
       headers: {
@@ -448,7 +448,7 @@ export async function fetchFromNewsAPI(query: string, limit: number = 10, existi
     fromDate.setDate(fromDate.getDate() - 1);
     const fromDateStr = fromDate.toISOString().split('T')[0];
 
-    const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&from=${fromDateStr}&sortBy=popularity&apiKey=${apiKey}&pageSize=${limit}&language=en`;
+    const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&from=${fromDateStr}&sortBy=publishedAt&apiKey=${apiKey}&pageSize=${limit}&language=en`;
     
     const response = await fetch(url, {
       headers: {
@@ -563,11 +563,17 @@ export async function generateSummaryWithHuggingFace(content: string): Promise<s
           do_sample: false,
           no_repeat_ngram_size: 3  // Prevent repetition
         }
-      })
+      }),
+      signal: AbortSignal.timeout(30000) // 30 second timeout
     });
 
     if (!response.ok) {
-      console.error('Hugging Face API Error:', response.status, await response.text());
+      const errorText = await response.text();
+      if (response.status === 504) {
+        console.warn('Hugging Face API Gateway Timeout (504) - falling back to basic summary extraction');
+      } else {
+        console.error('Hugging Face API Error:', response.status, errorText);
+      }
       return extractSentencesForSummary(content);
     }
 
@@ -588,7 +594,15 @@ export async function generateSummaryWithHuggingFace(content: string): Promise<s
     return extractSentencesForSummary(content);
 
   } catch (error) {
-    console.error('Error generating summary with Hugging Face:', error);
+    if (error instanceof Error) {
+      if (error.message.includes('timeout') || error.message.includes('ETIMEDOUT')) {
+        console.warn('Hugging Face API timeout - falling back to basic summary extraction');
+      } else {
+        console.error('Error generating summary with Hugging Face:', error.message);
+      }
+    } else {
+      console.error('Error generating summary with Hugging Face:', error);
+    }
     return extractSentencesForSummary(content);
   }
 }
@@ -722,49 +736,62 @@ function categorizeArticle(text: string, existingTags?: string[], searchQuery?: 
 /**
  * Fetch articles with GNews primary and NewsAPI fallback
  */
-export async function fetchArticlesWithFallback(queries: string[], articlesPerQuery: number = 10, existingTags?: string[]): Promise<NewsArticle[]> {
+export async function fetchArticlesWithFallback(queries: string[], articlesPerQuery: number = 2, existingTags?: string[]): Promise<NewsArticle[]> {
+  console.log(`🔍 Starting article fetch: ${queries.length} queries, ${articlesPerQuery} articles per query`);
+  
   const allArticles: NewsArticle[] = [];
   let useNewsAPIFallback = false;
 
-  for (const query of queries) {
+  for (let i = 0; i < queries.length; i++) {
+    const query = queries[i];
+    console.log(`\n📰 Processing query ${i + 1}/${queries.length}: "${query}"`);
+    
     try {
       let articles: NewsArticle[] = [];
 
       if (!useNewsAPIFallback) {
         try {
           articles = await fetchFromGNews(query, articlesPerQuery, existingTags);
-          console.log(`Fetched ${articles.length} articles from GNews for query: ${query}`);
+          console.log(`   ✅ GNews: Retrieved ${articles.length} articles`);
         } catch (error) {
           if (error instanceof Error && error.message === 'RATE_LIMIT_EXCEEDED') {
-            console.log('GNews rate limit exceeded, switching to NewsAPI for remaining queries');
+            console.log('   ⚠️  GNews rate limit exceeded, switching to NewsAPI for remaining queries');
             useNewsAPIFallback = true;
             articles = await fetchFromNewsAPI(query, articlesPerQuery, existingTags);
+            console.log(`   ✅ NewsAPI (fallback): Retrieved ${articles.length} articles`);
           } else {
             throw error;
           }
         }
       } else {
         articles = await fetchFromNewsAPI(query, articlesPerQuery, existingTags);
-        console.log(`Fetched ${articles.length} articles from NewsAPI for query: ${query}`);
+        console.log(`   ✅ NewsAPI: Retrieved ${articles.length} articles`);
       }
 
       // Generate summaries for each article
-      for (const article of articles) {
+      console.log(`   🤖 Generating summaries for ${articles.length} articles...`);
+      for (let j = 0; j < articles.length; j++) {
+        const article = articles[j];
         if (!article.shortSummary && article.content) {
           article.shortSummary = await generateSummaryWithHuggingFace(article.content);
+          console.log(`      📝 Summary ${j + 1}/${articles.length} generated`);
         }
       }
 
       allArticles.push(...articles);
 
       // Add delay between requests to respect rate limits
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (i < queries.length - 1) {
+        console.log(`   ⏳ Waiting 1s before next query...`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
 
     } catch (error) {
-      console.error(`Error fetching articles for query "${query}":`, error);
+      console.error(`   ❌ Error fetching articles for query "${query}":`, error);
       continue;
     }
   }
 
+  console.log(`\n🎯 Fetch complete: ${allArticles.length} total articles retrieved`);
   return allArticles;
 }

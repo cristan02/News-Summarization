@@ -40,8 +40,10 @@ async function executeDailyNewsFetch() {
 
   console.log(`Fetching articles for ${searchQueries.length} tags from database...`);
 
-  // Fetch articles with fallback logic - adjust articles per tag based on number of tags
-  const articlesPerTag = Math.max(3, Math.floor(40 / searchQueries.length)); // Aim for ~40 total articles
+  // Fixed articles per tag (no dynamic calculation to avoid confusion)
+  const articlesPerTag = 2; // Set to your desired limit
+  
+  console.log(`Configured to fetch ${articlesPerTag} articles per tag (${searchQueries.length} tags = max ${articlesPerTag * searchQueries.length} articles)`);
   
   // Pass all existing tag names to the fetcher for better categorization
   const existingTagNames = tags.map(tag => tag.name);
@@ -135,67 +137,44 @@ async function executeDailyNewsFetch() {
   return response;
 }
 
-async function executeCleanupJob() {
-  console.log('Starting manual cleanup job...');
+async function executeWeeklyCleanupJob() {
+  console.log('Starting manual weekly cleanup job...');
   
-  // Delete articles older than 60 days
-  const sixtyDaysAgo = new Date();
-  sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+  // Delete articles older than 15 days
+  const fifteenDaysAgo = new Date();
+  fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
   
   const deleteResult = await prisma.article.deleteMany({
     where: {
-      createdAt: {
-        lt: sixtyDaysAgo
-      }
+      OR: [
+        {
+          publishedAt: {
+            lt: fifteenDaysAgo
+          }
+        },
+        {
+          publishedAt: null,
+          createdAt: {
+            lt: fifteenDaysAgo
+          }
+        }
+      ]
     }
   });
 
-  // Clean up unused tags (tags with usageCount 0)
-  const unusedTagsResult = await prisma.tag.deleteMany({
-    where: {
-      usageCount: 0
-    }
-  });
-
-  // Update tag usage counts to reflect current articles
-  const tagCounts = await prisma.article.groupBy({
-    by: ['tag'],
-    _count: {
-      tag: true
-    }
-  });
-
-  // Reset all tag counts first
-  await prisma.tag.updateMany({
-    data: {
-      usageCount: 0
-    }
-  });
-
-  // Update with current counts
-  for (const tagCount of tagCounts) {
-    await prisma.tag.upsert({
-      where: { name: tagCount.tag },
-      update: { usageCount: tagCount._count.tag },
-      create: { 
-        name: tagCount.tag,
-        usageCount: tagCount._count.tag
-      }
-    });
-  }
+  console.log(`Weekly cleanup completed: deleted ${deleteResult.count} articles older than 15 days`);
 
   const response = {
     success: true,
-    message: 'Cleanup job completed',
+    message: 'Weekly cleanup completed',
     statistics: {
-      oldArticlesDeleted: deleteResult.count,
-      unusedTagsDeleted: unusedTagsResult.count,
-      tagCountsUpdated: tagCounts.length
+      articlesDeleted: deleteResult.count,
+      cutoffDate: fifteenDaysAgo.toISOString()
     },
     timestamp: new Date().toISOString()
   };
 
-  console.log('Cleanup job completed:', response.statistics);
+  console.log('Weekly cleanup job completed:', response.statistics);
   return response;
 }
 
@@ -217,10 +196,10 @@ export async function POST(request: NextRequest) {
         result
       });
 
-    } else if (action === 'cleanup') {
-      const result = await executeCleanupJob();
+    } else if (action === 'weekly-cleanup') {
+      const result = await executeWeeklyCleanupJob();
       return NextResponse.json({
-        message: 'Cleanup job triggered',
+        message: 'Weekly cleanup job triggered',
         result
       });
 

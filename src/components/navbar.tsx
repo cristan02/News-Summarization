@@ -13,7 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Switch } from '@/components/ui/switch'
 import { 
   User, 
   Settings, 
@@ -22,8 +21,6 @@ import {
   Newspaper, 
   Sun, 
   Moon,
-  Monitor,
-  Menu
 } from 'lucide-react'
 import { toast } from 'sonner'
 

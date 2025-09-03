@@ -21,9 +21,6 @@ export default function Error({ error, reset }: ErrorPageProps) {
       <div className="container mx-auto px-4 py-8">
         <Card className="max-w-lg mx-auto text-center">
           <CardHeader>
-            <div className="mb-4">
-              <div className="text-6xl font-bold text-destructive mb-2">⚠️</div>
-            </div>
             <CardTitle className="text-2xl text-destructive">Something went wrong!</CardTitle>
             <CardDescription className="text-lg">
               An unexpected error occurred while processing your request.
@@ -48,11 +45,6 @@ export default function Error({ error, reset }: ErrorPageProps) {
               <Button variant="outline" asChild>
                 <Link href="/">
                   Go Home
-                </Link>
-              </Button>
-              <Button variant="secondary" asChild>
-                <Link href="/feed">
-                  View Feed
                 </Link>
               </Button>
             </div>

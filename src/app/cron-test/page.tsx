@@ -21,7 +21,7 @@ export default function CronTestPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<CronJobResult | null>(null);
 
-  const triggerJob = async (action: 'daily-fetch' | 'cleanup') => {
+  const triggerJob = async (action: 'daily-fetch' | 'weekly-cleanup') => {
     setIsLoading(true);
     try {
       const response = await fetch('/api/cron/manual-trigger', {
@@ -62,7 +62,7 @@ export default function CronTestPage() {
           <CardHeader>
             <CardTitle>Daily News Fetch</CardTitle>
             <CardDescription>
-              The ONLY way external news is fetched. Processes articles from GNews API and NewsAPI, uses Hugging Face AI for summaries, and stores in database based on your tags.
+              The ONLY way external news is fetched. Processes articles from GNews API and NewsAPI, uses Hugging Face AI for summaries, and stores in database based on your tags. Runs daily at 11:00 AM.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -78,19 +78,19 @@ export default function CronTestPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Cleanup Old Articles</CardTitle>
+            <CardTitle>Weekly Cleanup</CardTitle>
             <CardDescription>
-              Removes articles older than 60 days and unused tags from the database.
+              Removes articles older than 15 days from the database. Runs weekly on Sundays at 3:00 AM.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button 
-              onClick={() => triggerJob('cleanup')}
+              onClick={() => triggerJob('weekly-cleanup')}
               disabled={isLoading}
               variant="secondary"
               className="w-full"
             >
-              {isLoading ? 'Running...' : 'Trigger Cleanup'}
+              {isLoading ? 'Running...' : 'Trigger Weekly Cleanup'}
             </Button>
           </CardContent>
         </Card>

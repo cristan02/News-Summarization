@@ -7,7 +7,6 @@ import { toast } from "sonner"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
-import { UserPreferencesHeader } from "@/components/user-preferences-header"
 import { TagSelector } from "@/components/tag-selector"
 import { SelectedTags } from "@/components/selected-tags"
 import { AddTagForm } from "@/components/add-tag-form"
@@ -150,8 +149,6 @@ export default function UserPreferences() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <div className="container mx-auto p-6 space-y-8">
-        {/* Header */}
-        <UserPreferencesHeader userName={session?.user?.name} />
 
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -179,19 +176,13 @@ export default function UserPreferences() {
               </CardContent>
             </Card>
 
-            {/* Selected Tags */}
+            {/* Selected Tags & Actions */}
             <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-6 space-y-4">
                 <SelectedTags
                   selectedTags={selectedTags}
                   onTagRemove={handleTagToggle}
                 />
-              </CardContent>
-            </Card>
-
-            {/* Action Buttons */}
-            <Card>
-              <CardContent className="p-6 space-y-3">
                 <Button
                   onClick={handleSavePreferences}
                   disabled={selectedTags.length === 0 || isSaving}
@@ -207,17 +198,6 @@ export default function UserPreferences() {
                     `Save ${selectedTags.length} interests`
                   )}
                 </Button>
-                
-                {selectedTags.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground text-center">
-                      Articles for your selected interests are automatically fetched daily at 6:00 AM UTC
-                    </p>
-                    <p className="text-xs text-muted-foreground text-center">
-                      Check the main feed or all-feed pages to see the latest articles
-                    </p>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </div>

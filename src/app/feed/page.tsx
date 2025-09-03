@@ -3,12 +3,14 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Loader2, Newspaper, Search, ExternalLink, Clock, RefreshCw } from "lucide-react"
+import { Loader2, Newspaper, Search, RefreshCw, Settings } from "lucide-react"
 import { toast } from "sonner"
+import TagFilter from '@/components/tag-filter'
+import ArticleGrid from '@/components/article-grid'
+import Link from 'next/link'
 
 interface Article {
   id: string
@@ -36,6 +38,8 @@ export default function FeedPage() {
   const [articles, setArticles] = useState<Article[]>([])
   const [filteredArticles, setFilteredArticles] = useState<Article[]>([])
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null)
+  const [availableTags, setAvailableTags] = useState<string[]>([])
+  const [selectedFilterTags, setSelectedFilterTags] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -47,12 +51,65 @@ export default function FeedPage() {
     
     if (status === 'authenticated') {
       fetchUserPreferencesAndArticles()
+      fetchAvailableTags()
     }
   }, [status, router])
 
   useEffect(() => {
+      const filterArticles = () => {
+    // Check if user has valid preferences set
+    const hasValidPreferences = userPreferences?.hasPreferences && 
+      userPreferences?.selectedTags && 
+      userPreferences.selectedTags.length > 0;
+    
+    if (!hasValidPreferences) {
+      // If no preferences set, show no articles (encourage setting preferences)
+      setFilteredArticles([])
+      return
+    }
+
+    let filtered = articles.filter(article => {
+      // Check if article tag matches any of user's selected tags
+      return userPreferences.selectedTags!.some(userTag => 
+        userTag.toLowerCase() === article.tag.toLowerCase()
+      )
+    })
+
+    // Apply additional tag filter if selected
+    if (selectedFilterTags.length > 0) {
+      filtered = filtered.filter(article =>
+        selectedFilterTags.some(filterTag =>
+          filterTag.toLowerCase() === article.tag.toLowerCase()
+        )
+      )
+    }
+
+    // Apply search filter if search query exists
+    if (searchQuery) {
+      filtered = filtered.filter(article =>
+        article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        article.shortSummary.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        article.tag.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    }
+
+    setFilteredArticles(filtered)
+  }
+  
     filterArticles()
-  }, [articles, userPreferences, searchQuery])
+  }, [articles, userPreferences, searchQuery, selectedFilterTags])
+
+  const fetchAvailableTags = async () => {
+    try {
+      const response = await fetch('/api/tags')
+      if (response.ok) {
+        const tags = await response.json()
+        setAvailableTags(tags.map((tag: any) => tag.name))
+      }
+    } catch (error) {
+      console.error('Error fetching tags:', error)
+    }
+  }
 
   const fetchUserPreferencesAndArticles = async () => {
     setIsLoading(true)
@@ -87,53 +144,23 @@ export default function FeedPage() {
     }
   }
 
-  const filterArticles = () => {
-    // Check if user has valid preferences set
-    const hasValidPreferences = userPreferences?.hasPreferences && 
-      userPreferences?.selectedTags && 
-      userPreferences.selectedTags.length > 0;
-    
-    if (!hasValidPreferences) {
-      // If no preferences set, show no articles (encourage setting preferences)
-      setFilteredArticles([])
-      return
+  const handleTagSelect = (tag: string) => {
+    if (!selectedFilterTags.includes(tag)) {
+      setSelectedFilterTags([...selectedFilterTags, tag])
     }
-
-    let filtered = articles.filter(article => {
-      // Check if article tag matches any of user's selected tags
-      return userPreferences.selectedTags!.some(userTag => 
-        userTag.toLowerCase() === article.tag.toLowerCase()
-      )
-    })
-
-    // Apply search filter if search query exists
-    if (searchQuery) {
-      filtered = filtered.filter(article =>
-        article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        article.shortSummary.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        article.tag.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    }
-
-    setFilteredArticles(filtered)
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+  const handleTagRemove = (tag: string) => {
+    setSelectedFilterTags(selectedFilterTags.filter(t => t !== tag))
   }
 
-  const handleArticleClick = (articleId: string) => {
-    router.push(`/article/${articleId}`)
+  const handleClearAllTags = () => {
+    setSelectedFilterTags([])
   }
 
   const refreshFeed = () => {
     fetchUserPreferencesAndArticles()
+    fetchAvailableTags()
     toast.success("Feed refreshed")
   }
 
@@ -163,20 +190,19 @@ export default function FeedPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-gradient-to-r from-primary to-secondary rounded-xl flex items-center justify-center">
+                <div className="w-12 h-12 bg-gradient-to-r from-primary/80 to-primary/50 rounded-xl flex items-center justify-center">
                   <Newspaper className="w-6 h-6 text-primary-foreground" />
                 </div>
                 <div>
                   <CardTitle className="text-2xl">Your News Feed</CardTitle>
-                  <p className="text-muted-foreground">
+                  <CardDescription>
                     Personalized news based on your interests
-                  </p>
+                  </CardDescription>
                 </div>
               </div>
               <div className="flex gap-2">
                 <Button 
                   variant="outline" 
-                  size="sm"
                   onClick={refreshFeed}
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />
@@ -184,56 +210,21 @@ export default function FeedPage() {
                 </Button>
                 <Button 
                   variant="outline" 
-                  onClick={() => router.push('/all-feed')}
+                  onClick={() => router.push('/user-preferences')}
                   className="hidden sm:flex"
                 >
-                  <Newspaper className="w-4 h-4 mr-2" />
-                  Browse All Articles
+                  <Settings className="w-4 h-4 mr-2" />
+                  Preferences
+                </Button>
+                <Button asChild>
+                  <Link href="/all-feed">
+                    <Newspaper className="w-4 h-4 mr-2" />
+                    Browse All
+                  </Link>
                 </Button>
               </div>
             </div>
           </CardHeader>
-        </Card>
-
-        {/* User Preferences Summary */}
-        {hasValidPreferences && (
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Your Interests</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {userPreferences?.selectedTags?.map((tag) => (
-                      <Badge key={tag} variant="secondary">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-                <Button 
-                  variant="outline" 
-                  onClick={() => router.push('/user-preferences')}
-                >
-                  Update Preferences
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Search */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search your personalized articles..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </CardContent>
         </Card>
 
         {/* No Preferences State */}
@@ -249,6 +240,7 @@ export default function FeedPage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
                 <Button onClick={() => router.push('/user-preferences')}>
+                  <Settings className="w-4 h-4 mr-2" />
                   Set My Preferences
                 </Button>
                 <Button 
@@ -262,103 +254,49 @@ export default function FeedPage() {
           </Card>
         )}
 
-        {/* Results Summary */}
         {hasValidPreferences && (
-          <div className="flex items-center justify-between">
-            <p className="text-muted-foreground">
-              {filteredArticles.length === 0 
-                ? "No articles match your preferences" 
-                : `Showing ${filteredArticles.length} personalized ${filteredArticles.length === 1 ? 'article' : 'articles'}`
-              }
-            </p>
-          </div>
-        )}
-
-        {/* No Articles Found */}
-        {hasValidPreferences && filteredArticles.length === 0 && (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Search className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">No matching articles found</h3>
-              <p className="text-muted-foreground mb-6">
-                {searchQuery 
-                  ? "Try adjusting your search terms or browse all articles."
-                  : "No articles match your current interests. Try updating your preferences or browse all available articles."
-                }
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
-                {searchQuery && (
-                  <Button variant="outline" onClick={() => setSearchQuery('')}>
-                    Clear Search
-                  </Button>
-                )}
-                <Button 
-                  variant="outline" 
-                  onClick={() => router.push('/user-preferences')}
-                >
-                  Update Preferences
-                </Button>
-                <Button onClick={() => router.push('/all-feed')}>
-                  Browse All Articles
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Articles Grid */}
-        {filteredArticles.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
-            {filteredArticles.map((article) => (
-              <Card 
-                key={article.id} 
-                className="hover:shadow-lg transition-shadow cursor-pointer group h-fit"
-                onClick={() => handleArticleClick(article.id)}
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-lg line-clamp-2 group-hover:text-primary transition-colors">
-                      {article.title}
-                    </CardTitle>
-                    <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
-                  </div>
-                </CardHeader>
-                
-                <CardContent className="space-y-4">
-                  {/* Summary - Auto-sizing without scroll */}
-                  <div className="text-sm text-muted-foreground leading-relaxed">
-                    <p className="whitespace-pre-wrap break-words">
-                      {article.shortSummary}
-                    </p>
-                  </div>
-
-                  {/* Tags */}
-                  <div className="flex flex-wrap gap-1">
-                    <Badge 
-                      variant={userPreferences?.selectedTags?.some(
-                        userTag => userTag.toLowerCase() === article.tag.toLowerCase()
-                      ) ? "default" : "secondary"} 
-                      className="text-xs"
-                    >
-                      {article.tag}
-                    </Badge>
-                  </div>
-
-                  {/* Source and Date */}
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <div className="flex items-center">
-                      <Clock className="w-3 h-3 mr-1" />
-                      {formatDate(article.publishedAt || article.createdAt)}
-                    </div>
-                    {article.source && (
-                      <span className="text-xs bg-muted px-2 py-1 rounded">
-                        {article.source}
-                      </span>
-                    )}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Sidebar with filters */}
+            <div className="lg:col-span-1 space-y-4">
+              {/* Search */}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                      placeholder="Search articles..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
                   </div>
                 </CardContent>
               </Card>
-            ))}
+
+              {/* Tag Filter */}
+              <TagFilter
+                availableTags={availableTags.filter(tag => 
+                  userPreferences?.selectedTags?.some(userTag => 
+                    userTag.toLowerCase() === tag.toLowerCase()
+                  )
+                )}
+                selectedTags={selectedFilterTags}
+                onTagSelect={handleTagSelect}
+                onTagRemove={handleTagRemove}
+                onClearAll={handleClearAllTags}
+                title="Filter by Topic"
+              />
+            </div>
+
+            {/* Main content */}
+            <div className="lg:col-span-3">
+              <ArticleGrid
+                articles={filteredArticles}
+                title="Your Personalized Feed"
+                emptyMessage="No articles match your current filters"
+                showSource={true}
+              />
+            </div>
           </div>
         )}
       </div>
