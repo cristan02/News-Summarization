@@ -29,7 +29,7 @@ interface Article {
   title: string
   link: string
   content: string
-  shortSummary: string
+  summary: string // renamed from shortSummary
   tag: string // Single tag instead of array
   source?: string
   author?: string
@@ -138,7 +138,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
           message: userMessage.content,
           articleContent: article?.content,
           articleTitle: article?.title,
-          articleSummary: article?.shortSummary
+          articleSummary: article?.summary
         }),
       })
 
@@ -245,7 +245,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 <div className="mt-6 overflow-y-auto max-h-[60vh]">
                   <div className="bg-muted/50 rounded-lg p-6">
                     <p className="text-base leading-relaxed whitespace-pre-wrap">
-                      {article?.shortSummary}
+                      {article?.summary}
                     </p>
                   </div>
                 </div>

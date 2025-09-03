@@ -83,7 +83,7 @@ async function executeDailyNewsFetch() {
           title: article.title,
           link: article.link,
           content: article.content,
-          shortSummary: article.shortSummary || '',
+          summary: article.summary || '',
           tag: article.tag,
           source: article.source,
           author: article.author,

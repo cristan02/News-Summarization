@@ -17,7 +17,7 @@ interface Article {
   title: string
   link: string
   content: string
-  shortSummary: string
+  summary: string // renamed from shortSummary
   tag: string // Single tag instead of array
   source?: string
   author?: string
@@ -57,7 +57,7 @@ export default function AllFeedPage() {
     if (searchQuery) {
       filtered = filtered.filter(article =>
         article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        article.shortSummary.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  article.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
         article.tag.toLowerCase().includes(searchQuery.toLowerCase())
       )
     }

@@ -77,7 +77,7 @@ const fetchFromNewsAPI = async (tag: string) => {
   return data.articles.map(article => ({
     title: article.title,
     content: article.content || article.description,
-    shortSummary: article.description,
+  summary: article.description,
     tag: tag,
     source: article.source.name,
     author: article.author,

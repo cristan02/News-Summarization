@@ -67,13 +67,14 @@ model Article {
   title           String
   link            String   @unique
   content         String   // Entire article text
-  shortSummary    String   // Short summary of the article
+  summary         String   // Summary of the article (renamed from shortSummary)
   tag             String   // Single tag for the article (matches a tag from Tag model)
   source          String?  // News source (e.g., "NewsAPI", "Guardian API")
   author          String?  // Article author
   publishedAt     DateTime? // Original publication date
   imageUrl        String?  // Article image URL
-  vectorEmbedding Float[]  @default([]) // Vector embeddings for similarity search
+  // Removed vectorEmbedding; embeddings now stored per chunk in Chunk collection
+  chunks          ArticleChunk[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -92,4 +93,21 @@ model Tag {
   updatedAt   DateTime @updatedAt
 
   @@map("tags")
+}
+
+// Chunk Model - stores segmented article text and per-chunk embeddings for RAG
+model ArticleChunk {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  articleId       String   @db.ObjectId
+  chunkText       String   // Text content of this chunk
+  vectorEmbedding Float[]  @default([]) // Embedding vector for similarity search
+  chunkIndex      Int      // Order of the chunk within the article
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  article         Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@map("article_chunks")
+  @@index([articleId])
+  @@index([chunkIndex])
 }

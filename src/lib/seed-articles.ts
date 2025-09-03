@@ -25,7 +25,7 @@ IBM announced that its quantum cloud service will offer access to the new error-
 The milestone represents years of collaborative research between academic institutions and technology companies. The quantum error correction breakthrough could accelerate the timeline for quantum advantage across multiple industries by 3-5 years.
 
 Major technology companies including Google, Microsoft, and Amazon have announced increased investments in quantum computing research following the breakthrough. The global quantum computing market is projected to reach $125 billion by 2030.`,
-    shortSummary:
+  summary:
       "IBM and MIT achieve quantum computing breakthrough with 100ms coherence in 1000-qubit system, bringing commercial quantum applications closer to reality through advanced error correction.",
     tag: "artificial intelligence",
     source: "NewsAPI",
@@ -64,7 +64,7 @@ The FDA has granted breakthrough therapy designation, potentially accelerating a
 Patient advocacy groups have hailed the development as a game-changer for the 55 million people worldwide living with dementia. The treatment could reduce healthcare costs by trillions of dollars over the next decade.
 
 BioGenesis Therapeutics plans to make the treatment widely available through partnerships with healthcare systems globally, with a focus on ensuring accessibility in developing countries.`,
-    shortSummary:
+  summary:
       "Revolutionary gene therapy shows 85% success rate in Phase III Alzheimer's trials, representing first potential cure by targeting amyloid plaques and restoring brain function.",
     tag: "health",
     source: "NewsAPI",
@@ -86,7 +86,7 @@ export async function seedArticles() {
         update: {
           title: article.title,
           content: article.content,
-          shortSummary: article.shortSummary,
+          summary: article.summary,
           tag: article.tag,
           source: article.source,
           author: article.author,
@@ -97,7 +97,7 @@ export async function seedArticles() {
           title: article.title,
           link: article.link,
           content: article.content,
-          shortSummary: article.shortSummary,
+          summary: article.summary,
           tag: article.tag,
           source: article.source || "Seed Data",
           author: article.author || "Unknown",

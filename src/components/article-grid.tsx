@@ -10,7 +10,7 @@ interface Article {
   id: string;
   title: string;
   link: string;
-  shortSummary: string;
+  summary: string; // renamed from shortSummary
   tag: string;
   source?: string;
   publishedAt?: string | null;
@@ -101,7 +101,7 @@ export default function ArticleGrid({
 
             <CardContent className="flex flex-col flex-1 space-y-4">
               <CardDescription className="text-sm leading-relaxed whitespace-pre-wrap flex-1">
-                {article.shortSummary}
+                {article.summary}
               </CardDescription>
 
               <div className="flex items-center justify-between">

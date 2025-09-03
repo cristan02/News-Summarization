@@ -4,7 +4,7 @@ interface NewsArticle {
   title: string;
   link: string;
   content: string;
-  shortSummary?: string;
+  summary?: string; // renamed from shortSummary
   tag: string;
   source: string;
   author?: string;
@@ -772,8 +772,8 @@ export async function fetchArticlesWithFallback(queries: string[], articlesPerQu
       console.log(`   🤖 Generating summaries for ${articles.length} articles...`);
       for (let j = 0; j < articles.length; j++) {
         const article = articles[j];
-        if (!article.shortSummary && article.content) {
-          article.shortSummary = await generateSummaryWithHuggingFace(article.content);
+        if (!article.summary && article.content) {
+          article.summary = await generateSummaryWithHuggingFace(article.content);
           console.log(`      📝 Summary ${j + 1}/${articles.length} generated`);
         }
       }

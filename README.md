@@ -158,18 +158,30 @@ The application uses a single-tag architecture for optimal performance:
 
 ```prisma
 model Article {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  title        String
-  link         String   @unique
-  content      String
-  shortSummary String
-  tag          String   // Single tag instead of array
-  source       String?
-  author       String?
-  publishedAt  DateTime?
-  imageUrl     String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+   id           String   @id @default(auto()) @map("_id") @db.ObjectId
+   title        String
+   link         String   @unique
+   content      String
+   summary      String   // renamed from shortSummary
+   tag          String   // Single tag instead of array
+   source       String?
+   author       String?
+   publishedAt  DateTime?
+   imageUrl     String?
+   createdAt    DateTime @default(now())
+   updatedAt    DateTime @updatedAt
+      chunks       ArticleChunk[]  // related chunks with per-chunk embeddings
+}
+
+model ArticleChunk {
+   id              String   @id @default(auto()) @map("_id") @db.ObjectId
+   articleId       String   @db.ObjectId
+   chunkText       String
+   vectorEmbedding Float[]  @default([])
+   chunkIndex      Int
+   createdAt       DateTime @default(now())
+   updatedAt       DateTime @updatedAt
+      article         Article  @relation(fields: [articleId], references: [id])
 }
 
 model User {

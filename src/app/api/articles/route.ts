@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
         title: true,
         link: true,
         content: true,
-        shortSummary: true,
+  summary: true,
         tag: true,
         source: true,
         author: true,
