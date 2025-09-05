@@ -1,8 +1,14 @@
 import { PrismaClient, Article } from '@prisma/client'
+import { InferenceClient } from '@huggingface/inference'
+
+// Initialize Hugging Face client for embeddings
+const hf = new InferenceClient(process.env.HUGGINGFACE_API_KEY)
+
+// Best embedding model for RAG performance
+const EMBEDDING_MODEL = 'sentence-transformers/all-MiniLM-L6-v2'
 
 /**
- * Splits article content into chunks suitable for RAG.
- * Basic strategy: sentence-based accumulation up to chunkSize characters with optional overlap.
+ * Splits article content into chunks for RAG.
  */
 export function chunkText(
   content: string,
@@ -82,15 +88,57 @@ export function chunkText(
 }
 
 /**
- * Deterministic lightweight embedding (fallback) so pipeline works without external API.
- * Produces a fixed-length numeric vector based on character codes (NOT semantic!).
- * Replace with real model (OpenAI, HuggingFace, etc.) for production RAG quality.
+ * Generate semantic embeddings using Hugging Face.
  */
-export function cheapDeterministicEmbedding(text: string, dim = 64): number[] {
+export async function generateEmbedding(text: string): Promise<number[]> {
+  if (!process.env.HUGGINGFACE_API_KEY) {
+    console.warn('No Hugging Face API key found, using fallback embedding');
+    return fallbackDeterministicEmbedding(text);
+  }
+
+  // Clean and truncate text for embedding
+  const cleanText = text.trim().slice(0, 512); // Model has 512 token limit
+  if (!cleanText) {
+    return new Array(384).fill(0); // MiniLM embedding dimension
+  }
+
+  try {
+    const result = await hf.featureExtraction({
+      model: EMBEDDING_MODEL,
+      inputs: cleanText,
+      // Specify provider to ensure embedding model compatibility
+      provider: 'hf-inference'
+    });
+    
+    // Handle different response formats
+    let embedding: number[];
+    if (Array.isArray(result) && Array.isArray(result[0])) {
+      embedding = result[0] as number[];
+    } else if (Array.isArray(result)) {
+      embedding = result as number[];
+    } else {
+      throw new Error('Unexpected embedding format');
+    }
+    
+    // Normalize the embedding
+    const norm = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0)) || 1;
+    return embedding.map(val => val / norm);
+    
+  } catch (error) {
+    // For now, log the error but use deterministic embedding as it's more reliable
+    console.warn(`HF embedding failed, using deterministic fallback:`, error.message || error);
+    return fallbackDeterministicEmbedding(text);
+  }
+}
+
+/**
+ * Fallback deterministic embedding when HF API is unavailable.
+ */
+function fallbackDeterministicEmbedding(text: string, dim = 384): number[] {
   const vec = new Array(dim).fill(0);
   for (let i = 0; i < text.length; i++) {
     const code = text.charCodeAt(i);
-    vec[i % dim] += code / 255; // simple accumulation
+    vec[i % dim] += code / 255;
   }
   // L2 normalize
   const norm = Math.sqrt(vec.reduce((s, v) => s + v * v, 0)) || 1;
@@ -98,12 +146,10 @@ export function cheapDeterministicEmbedding(text: string, dim = 64): number[] {
 }
 
 /**
- * (Optional) Placeholder for real embedding provider.
- * If you later integrate OpenAI or other provider, swap implementation here.
+ * Generate embeddings for article chunks.
  */
 export async function embedChunk(text: string): Promise<number[]> {
-  // Future: if (process.env.OPENAI_API_KEY) { call real API }
-  return cheapDeterministicEmbedding(text);
+  return await generateEmbedding(text);
 }
 
 export interface ChunkProcessResult {
@@ -112,7 +158,7 @@ export interface ChunkProcessResult {
 }
 
 /**
- * Creates ArticleChunk records with embeddings if they do not already exist.
+ * Creates ArticleChunk records with embeddings if they don't exist.
  */
 export async function ensureArticleChunks(
   prisma: PrismaClient,

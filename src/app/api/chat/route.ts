@@ -1,54 +1,188 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { generateEmbedding } from '@/lib/chunk-embed'
+import { InferenceClient } from '@huggingface/inference'
 
-// Simple AI assistant simulation for chat functionality
-// In a real implementation, you would integrate with OpenAI, Anthropic, or other AI providers
-function generateAIResponse(message: string, articleContent?: string, articleTitle?: string, articleSummary?: string): string {
-  const lowerMessage = message.toLowerCase()
+// Hugging Face configuration
+const HF_API_TOKEN = process.env.HUGGINGFACE_API_KEY
+const hf = new InferenceClient(HF_API_TOKEN)
+
+// Best model for RAG chat responses
+const CHAT_MODEL = 'meta-llama/Llama-3.1-8B-Instruct'
+
+// Calculate cosine similarity between two embeddings
+function cosineSimilarity(a: number[], b: number[]): number {
+  if (a.length !== b.length) return 0;
   
-  // Simple keyword-based responses
-  if (lowerMessage.includes('summary') || lowerMessage.includes('summarize')) {
-    return articleSummary 
-      ? `Here's the summary of "${articleTitle}": ${articleSummary}`
-      : "I don't have a summary available for this article."
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+  
+  for (let i = 0; i < a.length; i++) {
+    dotProduct += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
   }
   
-  if (lowerMessage.includes('key points') || lowerMessage.includes('main points')) {
-    if (articleContent) {
-      // Simple extraction of first few sentences as key points
-      const sentences = articleContent.split('.').slice(0, 3).filter(s => s.trim().length > 20)
-      return `Here are the key points from the article:\n\n${sentences.map((s, i) => `${i + 1}. ${s.trim()}.`).join('\n')}`
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+// Find most relevant chunks using RAG with semantic embeddings
+async function findRelevantChunks(articleId: string, query: string, limit: number = 3): Promise<string[]> {
+  try {
+    // Get query embedding using Hugging Face
+    const queryEmbedding = await generateEmbedding(query);
+    
+    // Get all chunks for the article
+    const chunks = await prisma.articleChunk.findMany({
+      where: { articleId },
+      orderBy: { chunkIndex: 'asc' }
+    });
+    
+    if (chunks.length === 0) return [];
+    
+    // Calculate similarities and sort by relevance
+    const chunksWithSimilarity = chunks.map(chunk => ({
+      chunk,
+      similarity: cosineSimilarity(queryEmbedding, chunk.vectorEmbedding)
+    }));
+    
+    chunksWithSimilarity.sort((a, b) => b.similarity - a.similarity);
+    
+    // Return top chunks
+    return chunksWithSimilarity
+      .slice(0, limit)
+      .map(item => item.chunk.chunkText);
+  } catch (error) {
+    console.error('Error finding relevant chunks:', error);
+    return [];
+  }
+}
+
+// Call Hugging Face using the official library
+async function getHuggingFaceResponse(messages: Array<{role: string, content: string}>): Promise<string> {
+  if (!HF_API_TOKEN) {
+    console.error('Hugging Face API key not found');
+    return 'API key configuration error. Please check your environment variables.';
+  }
+
+  try {
+    // Try chat completion first
+    try {
+      const response = await hf.chatCompletion({
+        model: CHAT_MODEL,
+        messages: messages,
+        max_tokens: 200,
+        temperature: 0.7,
+        // Specify provider for better reliability
+        provider: 'cerebras'
+      });
+
+      if (response.choices && response.choices.length > 0) {
+        const content = response.choices[0].message?.content;
+        if (content) {
+          return content.trim();
+        }
+      }
+    } catch (chatError) {
+      // Fallback to text generation
+      const prompt = messages.map(m => `${m.role}: ${m.content}`).join('\n') + '\nassistant:';
+      
+      const response = await hf.textGeneration({
+        model: CHAT_MODEL,
+        inputs: prompt,
+        parameters: {
+          max_new_tokens: 150,
+          temperature: 0.7,
+          return_full_text: false,
+        },
+        // Specify provider for text generation fallback
+        provider: 'hf-inference'
+      });
+
+      if (response.generated_text) {
+        return response.generated_text.trim();
+      }
     }
-    return "I don't have enough content to extract key points."
+    
+  } catch (error) {
+    console.error(`Error with model ${CHAT_MODEL}:`, error);
   }
   
-  if (lowerMessage.includes('opinion') || lowerMessage.includes('what do you think')) {
-    return "As an AI assistant, I provide information rather than personal opinions. I can help you analyze the facts presented in the article, identify different perspectives, or discuss the implications of the reported events."
-  }
+  // Fallback to rule-based response
+  return generateSmartResponse(messages[messages.length - 1]?.content || '');
+}
+
+// Smart rule-based response generator as fallback
+function generateSmartResponse(prompt: string): string {
+  const lowerPrompt = prompt.toLowerCase();
   
-  if (lowerMessage.includes('source') || lowerMessage.includes('reliable')) {
-    return "This article comes from your news database. For the most reliable information, I recommend checking the original source link and cross-referencing with other reputable news outlets."
+  if (lowerPrompt.includes('what') || lowerPrompt.includes('explain')) {
+    return 'Based on the article content, this appears to be about the key points mentioned in the relevant sections.';
+  } else if (lowerPrompt.includes('how')) {
+    return 'The article describes the process and methodology related to your question.';
+  } else if (lowerPrompt.includes('why')) {
+    return 'According to the article, this is likely due to the factors and reasons discussed in the content.';
+  } else if (lowerPrompt.includes('when') || lowerPrompt.includes('where')) {
+    return 'The article provides context about the timing and location of these events.';
+  } else {
+    return 'Based on the article content, I can provide information related to your question from the relevant sections.';
   }
-  
-  if (lowerMessage.includes('explain') || lowerMessage.includes('what does')) {
-    return "I'd be happy to explain any concepts from the article. Could you be more specific about what you'd like me to clarify?"
+}// Enhanced AI response generation using RAG + Hugging Face Router
+async function generateRAGResponse(
+  message: string, 
+  articleId: string,
+  articleTitle?: string, 
+  articleSummary?: string
+): Promise<string> {
+  try {
+    // Get relevant chunks based on the query
+    const relevantChunks = await findRelevantChunks(articleId, message, 2);
+    
+    // Build context from relevant chunks
+    const context = relevantChunks.length > 0 
+      ? relevantChunks.join('\n\n')
+      : '';
+    
+    // Create messages for chat completions format
+    const messages = [];
+    
+    // System message with context
+    if (context) {
+      messages.push({
+        role: 'system',
+        content: `You are a helpful assistant answering questions about an article titled "${articleTitle}". Use the following article content to answer questions accurately and concisely:\n\n${context}`
+      });
+    } else {
+      messages.push({
+        role: 'system',
+        content: `You are a helpful assistant answering questions about an article titled "${articleTitle}". ${articleSummary ? `Article summary: ${articleSummary}` : ''}`
+      });
+    }
+    
+    // User message
+    messages.push({
+      role: 'user',
+      content: message
+    });
+    
+    // Get AI response from Hugging Face Router
+    const aiResponse = await getHuggingFaceResponse(messages);
+    
+    // Ensure response is not too long and is helpful
+    let cleanResponse = aiResponse.trim();
+    if (cleanResponse.length > 500) {
+      cleanResponse = cleanResponse.substring(0, 500) + '...';
+    }
+    
+    return cleanResponse || 'I apologize, but I couldn\'t generate a proper response. Could you try rephrasing your question?';
+    
+  } catch (error) {
+    console.error('Error generating RAG response:', error);
+    return 'I encountered an error while processing your question. Please try again.';
   }
-  
-  if (lowerMessage.includes('similar') || lowerMessage.includes('related')) {
-    return "While I can't access other articles in real-time, I recommend looking for articles with similar tags or searching for related keywords in your news feed."
-  }
-  
-  if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
-    return `Hello! I'm here to help you understand and discuss "${articleTitle}". You can ask me about the summary, key points, or any specific aspects of the article.`
-  }
-  
-  if (lowerMessage.includes('help')) {
-    return "I can help you with:\n• Summarizing the article\n• Explaining key points\n• Discussing specific parts of the content\n• Clarifying concepts mentioned in the article\n\nWhat would you like to know?"
-  }
-  
-  // Default response for general questions
-  return `I understand you're asking about "${message}". Based on the article "${articleTitle}", I can help you discuss its content. Could you be more specific about what aspect of the article you'd like to explore?`
 }
 
 export async function POST(request: NextRequest) {
@@ -59,14 +193,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { message, articleContent, articleTitle, articleSummary } = await request.json()
+    const { message, articleId, articleTitle, articleSummary } = await request.json()
 
-    if (!message) {
-      return NextResponse.json({ error: 'Message is required' }, { status: 400 })
+    if (!message || !articleId) {
+      return NextResponse.json({ error: 'Message and articleId are required' }, { status: 400 })
     }
 
-    // Generate AI response (simulated)
-    const response = generateAIResponse(message, articleContent, articleTitle, articleSummary)
+    // Generate AI response using RAG + Hugging Face
+    const response = await generateRAGResponse(message, articleId, articleTitle, articleSummary)
 
     return NextResponse.json({ response })
   } catch (error) {

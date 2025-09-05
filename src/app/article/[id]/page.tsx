@@ -110,6 +110,20 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     scrollToBottom()
   }, [chatMessages])
 
+  useEffect(() => {
+    // Scroll to bottom when user starts typing
+    if (newMessage.length > 0) {
+      scrollToBottom()
+    }
+  }, [newMessage])
+
+  useEffect(() => {
+    // Scroll to bottom when chat loading starts
+    if (isChatLoading) {
+      scrollToBottom()
+    }
+  }, [isChatLoading])
+
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -136,7 +150,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
         },
         body: JSON.stringify({
           message: userMessage.content,
-          articleContent: article?.content,
+          articleId: article?.id,
           articleTitle: article?.title,
           articleSummary: article?.summary
         }),
@@ -217,7 +231,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <div className="container mx-auto p-6 space-y-6">
         {/* Header with Navigation and Actions */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between lg:pr-80">
           <Button 
             variant="outline" 
             onClick={() => router.push('/all-feed')}
@@ -258,7 +272,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                 <SheetTrigger asChild>
                   <Button>
                     <MessageCircle className="w-4 h-4 mr-2" />
-                    Chat
+                    Ask Questions
                   </Button>
                 </SheetTrigger>
                 <SheetContent className="w-full sm:max-w-lg flex flex-col">
@@ -267,6 +281,9 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       <Bot className="w-5 h-5 mr-2" />
                       AI Article Assistant
                     </SheetTitle>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Ask questions about this article. I'll search through the content to find relevant information and provide detailed answers.
+                    </p>
                   </SheetHeader>
                   
                   {/* Mobile Chat Interface */}
@@ -320,7 +337,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                     {/* Mobile Chat Input */}
                     <div className="flex gap-2 border-t pt-4 items-center">
                       <Textarea
-                        placeholder="Ask a question about this article..."
+                        placeholder="Ask about topics, quotes, details..."
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         onKeyPress={handleKeyPress}
@@ -343,173 +360,174 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
         </div>
 
         {/* Main Content Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Article Content - Takes 2 columns on large screens */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Title and Header */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <CardTitle className="text-3xl mb-3">{article.title}</CardTitle>
-                    
-                    {/* Tag and Source Information */}
-                    <div className="flex items-center gap-3 mb-2">
-                      {article.tag && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-muted-foreground">Topic:</span>
-                          <Badge variant="secondary" className="text-sm">
-                            {article.tag}
-                          </Badge>
-                        </div>
-                      )}
-                      {article.source && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-muted-foreground">Source:</span>
-                          <Badge variant="outline" className="text-sm">
-                            {article.source}
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => window.open(article.link, '_blank')}
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Read Original
-                  </Button>
-                </div>
-                
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    {formatDate(article.createdAt)}
-                  </div>
-                  {article.author && (
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4" />
-                      <span>By {article.author}</span>
-                    </div>
-                  )}
-                </div>
-              </CardHeader>
-            </Card>
-
-            {/* Full Content */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Article Content</CardTitle>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => copyToClipboard(article.content)}
-                  >
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copy
-                  </Button>
-                </div>
-                <div className="mt-2 p-3 bg-muted/50 rounded-lg border-l-4 border-orange-500">
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Disclaimer:</strong> Article content may not retain the exact formatting, layout, or visual elements of the original publication. This is an extracted text version for reading convenience.
-                  </p>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="prose prose-sm max-w-none dark:prose-invert">
-                  <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                    {article.content}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Fixed Chat Interface - Only visible on large screens */}
-          <div className="hidden lg:block lg:col-span-1">
-            <div className="sticky top-6">
-              <Card className="h-[calc(100vh-8rem)]">
+        <div className="relative">
+          {/* Article Content */}
+          <div className="lg:pr-80">
+            <div className="space-y-6">
+              {/* Title and Header */}
+              <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg flex items-center">
-                    <Bot className="w-5 h-5 mr-2" />
-                    AI Article Assistant
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Ask questions about this article or discuss its content
-                  </p>
-                </CardHeader>
-                
-                <CardContent className="flex flex-col h-[calc(100%-6rem)]">
-                  {/* Desktop Chat Messages */}
-                  <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2">
-                    {chatMessages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div
-                          className={`max-w-[85%] rounded-lg p-3 ${
-                            message.role === 'user'
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            {message.role === 'user' ? (
-                              <User className="w-4 h-4" />
-                            ) : (
-                              <Bot className="w-4 h-4" />
-                            )}
-                            <span className="text-xs opacity-70">
-                              {formatDate(message.timestamp)}
-                            </span>
-                          </div>
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                            {message.content}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                    
-                    {isChatLoading && (
-                      <div className="flex justify-start">
-                        <div className="bg-muted rounded-lg p-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <CardTitle className="text-3xl mb-3">{article.title}</CardTitle>
+                      
+                      {/* Tag and Source Information */}
+                      <div className="flex items-center gap-3 mb-2">
+                        {article.tag && (
                           <div className="flex items-center gap-2">
-                            <Bot className="w-4 h-4" />
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            <span className="text-sm">AI is thinking...</span>
+                            <span className="text-sm font-medium text-muted-foreground">Topic:</span>
+                            <Badge variant="secondary" className="text-sm">
+                              {article.tag}
+                            </Badge>
                           </div>
-                        </div>
+                        )}
+                        {article.source && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-muted-foreground">Source:</span>
+                            <Badge variant="outline" className="text-sm">
+                              {article.source}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => window.open(article.link, '_blank')}
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      Read Original
+                    </Button>
+                  </div>
+                  
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      {formatDate(article.createdAt)}
+                    </div>
+                    {article.author && (
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4" />
+                        <span>By {article.author}</span>
                       </div>
                     )}
-                    
-                    <div ref={chatEndRef} />
                   </div>
+                </CardHeader>
+              </Card>
 
-                  {/* Desktop Chat Input */}
-                  <div className="flex gap-2 border-t pt-4 items-center">
-                    <Textarea
-                      placeholder="Ask a question about this article..."
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                      className="flex-1 min-h-[40px] max-h-[100px] resize-none"
-                      rows={1}
-                    />
+              {/* Full Content */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">Article Content</CardTitle>
                     <Button 
-                      onClick={sendMessage} 
-                      disabled={!newMessage.trim() || isChatLoading}
-                      className="h-[40px] w-[40px] p-0"
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => copyToClipboard(article.content)}
                     >
-                      <Send className="w-4 h-4" />
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy
                     </Button>
+                  </div>
+                  <div className="mt-2 p-3 bg-muted/50 rounded-lg border-l-4 border-orange-500">
+                    <p className="text-xs text-muted-foreground">
+                      <strong>Disclaimer:</strong> Article content may not retain the exact formatting, layout, or visual elements of the original publication. This is an extracted text version for reading convenience.
+                    </p>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="prose prose-sm max-w-none dark:prose-invert">
+                    <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                      {article.content}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
+          </div>
+
+          {/* Fixed Chat Interface - Only visible on large screens */}
+          <div className="hidden lg:block fixed top-20 right-6 w-80 h-[calc(100vh-8rem)] z-30">
+            <Card className="h-full shadow-lg border-2">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center">
+                  <Bot className="w-4 h-4 mr-2" />
+                  AI Assistant
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Ask questions for quick, relevant answers.
+                </p>
+              </CardHeader>
+              
+              <CardContent className="flex flex-col h-[calc(100%-4rem)] p-3">
+                {/* Chat Messages */}
+                <div className="flex-1 overflow-y-auto space-y-2 mb-3 scrollbar-hide">
+                  {chatMessages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-[85%] rounded-lg p-2 ${
+                          message.role === 'user'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1 mb-1">
+                          {message.role === 'user' ? (
+                            <User className="w-3 h-3" />
+                          ) : (
+                            <Bot className="w-3 h-3" />
+                          )}
+                          <span className="text-xs opacity-70">
+                            {formatDate(message.timestamp)}
+                          </span>
+                        </div>
+                        <p className="text-xs leading-relaxed whitespace-pre-wrap">
+                          {message.content}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {isChatLoading && (
+                    <div className="flex justify-start">
+                      <div className="bg-muted rounded-lg p-2">
+                        <div className="flex items-center gap-1">
+                          <Bot className="w-3 h-3" />
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          <span className="text-xs">Thinking...</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div ref={chatEndRef} />
+                </div>
+
+                {/* Chat Input */}
+                <div className="flex gap-2 border-t pt-2 items-center">
+                  <Textarea
+                    placeholder="Ask about topics, quotes, details..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    className="flex-1 min-h-[32px] max-h-[64px] resize-none text-xs"
+                    rows={1}
+                  />
+                  <Button 
+                    onClick={sendMessage} 
+                    disabled={!newMessage.trim() || isChatLoading}
+                    className="h-[32px] w-[32px] p-0"
+                    size="sm"
+                  >
+                    <Send className="w-3 h-3" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

@@ -1,4 +1,8 @@
 // Utility functions for external news APIs and Hugging Face integration
+import { InferenceClient } from '@huggingface/inference'
+
+// Initialize Hugging Face client
+const hf = new InferenceClient(process.env.HUGGINGFACE_API_KEY)
 
 interface NewsArticle {
   title: string;
@@ -496,7 +500,7 @@ export async function fetchFromNewsAPI(query: string, limit: number = 10, existi
 }
 
 /**
- * Generate summary using Hugging Face API
+ * Generate summary using Hugging Face API with the official library
  */
 export async function generateSummaryWithHuggingFace(content: string): Promise<string> {
   try {
@@ -515,41 +519,25 @@ export async function generateSummaryWithHuggingFace(content: string): Promise<s
     const truncatedContent = cleanedContent.length > maxInputLength ? 
       cleanedContent.substring(0, maxInputLength) + '...' : cleanedContent;
 
-    const response = await fetch('https://api-inference.huggingface.co/models/facebook/bart-large-cnn', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
+    // Use the official Hugging Face library for summarization
+    const result = await hf.summarization({
+      model: 'facebook/bart-large-cnn',
+      inputs: truncatedContent,
+      parameters: {
+        max_length: 180,  // Increased for longer paragraph (6-8 lines)
+        min_length: 80,   // Minimum 80 words for substantial paragraph
+        length_penalty: 1.2,  // Allow longer summaries
+        num_beams: 4,
+        early_stopping: true,
+        do_sample: false,
+        no_repeat_ngram_size: 3  // Prevent repetition
       },
-      body: JSON.stringify({
-        inputs: truncatedContent,
-        parameters: {
-          max_length: 180,  // Increased for longer paragraph (6-8 lines)
-          min_length: 80,   // Minimum 80 words for substantial paragraph
-          length_penalty: 1.2,  // Allow longer summaries
-          num_beams: 4,
-          early_stopping: true,
-          do_sample: false,
-          no_repeat_ngram_size: 3  // Prevent repetition
-        }
-      }),
-      signal: AbortSignal.timeout(30000) // 30 second timeout
+      // Specify provider for better reliability
+      provider: 'hf-inference'
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      if (response.status === 504) {
-        console.warn('Hugging Face API Gateway Timeout (504) - falling back to basic summary extraction');
-      } else {
-        console.error('Hugging Face API Error:', response.status, errorText);
-      }
-      return extractSentencesForSummary(content);
-    }
-
-    const result = await response.json();
     
-    if (result && result[0] && result[0].summary_text) {
-      const summary = result[0].summary_text.trim();
+    if (result && result.summary_text) {
+      const summary = result.summary_text.trim();
       // Allow longer summaries - limit to ~600 characters (6-8 lines)
       if (summary.length > 600) {
         const sentences = summary.split(/[.!?]+/).filter((s: string) => s.trim().length > 0);
