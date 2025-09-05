@@ -6,39 +6,79 @@ import { PrismaClient, Article } from '@prisma/client'
  */
 export function chunkText(
   content: string,
-  options: { chunkSize?: number; overlap?: number } = {}
+  options: { chunkSize?: number; overlap?: number; minChunkSize?: number } = {}
 ): string[] {
-  const chunkSize = options.chunkSize ?? 1200; // chars
-  const overlap = options.overlap ?? 150; // chars
+  const chunkSize = options.chunkSize ?? 1200; // target max chars
+  const overlap = options.overlap ?? 150;       // trailing chars of previous chunk to prepend for context
+  const minChunkSize = options.minChunkSize ?? Math.floor(chunkSize * 0.5); // allow slight growth to avoid word breaks
+
   if (!content) return [];
 
   // Normalize whitespace
   const cleaned = content.replace(/\s+/g, ' ').trim();
   if (cleaned.length <= chunkSize) return [cleaned];
 
-  // Split by sentence enders, keep delimiters.
+  // Sentence-based splitting first
   const sentences = cleaned.match(/[^.!?]+[.!?]?/g) || [cleaned];
 
-  const chunks: string[] = [];
-  let current = '';
+  const rawChunks: string[] = [];
+  let buffer = '';
+
+  const pushBuffer = () => {
+    const trimmed = buffer.trim();
+    if (trimmed) rawChunks.push(trimmed);
+    buffer = '';
+  };
 
   for (const sentence of sentences) {
-    if ((current + sentence).length > chunkSize) {
-      if (current) chunks.push(current.trim());
-      // Start new chunk with overlap tail from previous
-      if (overlap > 0 && chunks.length > 0) {
-        const prev = chunks[chunks.length - 1];
-        const tail = prev.slice(-overlap);
-        current = tail + ' ' + sentence;
-      } else {
-        current = sentence;
+    // If adding the sentence would exceed chunkSize and buffer is already reasonably sized, flush
+    if (buffer.length > 0 && (buffer + sentence).length > chunkSize && buffer.length >= minChunkSize) {
+      pushBuffer();
+    }
+    buffer += sentence;
+  }
+  pushBuffer();
+
+  // Now refine each raw chunk to ensure we don't cut mid-word when applying overlap logic.
+  // If any chunk exceeds chunkSize significantly (because a single sentence was huge), we hard-wrap by whitespace.
+  const finalChunks: string[] = [];
+  for (const chunk of rawChunks) {
+    if (chunk.length <= chunkSize + 100) { // allow slight overflow to preserve words
+      finalChunks.push(chunk);
+      continue;
+    }
+    // Break long chunk by whitespace without breaking words
+    let start = 0;
+    while (start < chunk.length) {
+      let end = Math.min(start + chunkSize, chunk.length);
+      if (end < chunk.length) {
+        // Move end backward to the last space to avoid cutting word
+        const spaceIdx = chunk.lastIndexOf(' ', end - 1);
+        if (spaceIdx > start + 50) { // ensure we still make progress
+          end = spaceIdx;
+        }
       }
-    } else {
-      current += sentence;
+      finalChunks.push(chunk.slice(start, end).trim());
+      start = end;
     }
   }
-  if (current.trim()) chunks.push(current.trim());
-  return chunks;
+
+  // Apply overlap: build overlappedChunks from finalChunks
+  if (overlap > 0 && finalChunks.length > 1) {
+    const withOverlap: string[] = [];
+    for (let i = 0; i < finalChunks.length; i++) {
+      if (i === 0) {
+        withOverlap.push(finalChunks[i]);
+      } else {
+        const prev = finalChunks[i - 1];
+        const tail = prev.slice(-overlap);
+        withOverlap.push((tail + ' ' + finalChunks[i]).trim());
+      }
+    }
+    return withOverlap;
+  }
+
+  return finalChunks;
 }
 
 /**
@@ -112,6 +152,9 @@ export async function ensureArticleChunks(
       await prisma.articleChunk.create({ data: row });
     }
   }
+
+  // Update article with chunkCount
+  await prisma.article.update({ where: { id: article.id }, data: { chunkCount: data.length } });
 
   return { created: data.length, skippedExisting: false };
 }

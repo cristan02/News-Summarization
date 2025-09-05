@@ -156,20 +156,7 @@ export function extractArticleTextFromHTML(html: string): string {
       
       if (matches) {
         for (const match of matches) {
-          // Check if this element contains paragraphs for structure
-          const paragraphsInMatch = match.match(/<p[^>]*>[\s\S]*?<\/p>/gi) || [];
-          
-          let content = '';
-          if (paragraphsInMatch.length > 2) {
-            // Multiple paragraphs found - preserve structure
-            content = paragraphsInMatch
-              .map(p => p.replace(/<[^>]*>/g, '').trim())
-              .filter(p => p.length > 20) // Remove very short paragraphs
-              .join('\n\n');
-          } else {
-            // Single or no paragraphs - extract all text
-            content = match.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-          }
+          let content = extractParagraphsFromHTML(match);
           
           if (content.length > maxContentLength && content.length > 100) {
             extractedContent = content;
@@ -183,48 +170,14 @@ export function extractArticleTextFromHTML(html: string): string {
     }
   }
 
-  // If no content found with selectors, try to extract all paragraphs
+  // If no content found with selectors, try to extract from whole document
   if (!extractedContent || extractedContent.length < 500) {
-    const paragraphs = cleanHtml.match(/<p[^>]*>([\s\S]*?)<\/p>/gi) || [];
-    
-    if (paragraphs.length > 2) {
-      // Multiple paragraphs - preserve structure
-      const structuredContent = paragraphs
-        .map(p => {
-          const text = p.replace(/<[^>]*>/g, '').trim();
-          return decodeHtmlEntities(text);
-        })
-        .filter(p => p.length > 20 && !isNavigationContent(p))
-        .join('\n\n');
-      
-      if (structuredContent.length > extractedContent.length) {
-        extractedContent = structuredContent;
-      }
-    } else {
-      // Few paragraphs - combine as single text
-      const combinedContent = paragraphs
-        .map(p => p.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim())
-        .filter(p => p.length > 20 && !isNavigationContent(p))
-        .join(' ');
-      
-      if (combinedContent.length > extractedContent.length) {
-        extractedContent = combinedContent;
-      }
-    }
+    extractedContent = extractParagraphsFromHTML(cleanHtml);
   }
 
-  // If still no good content, extract from all text content
-  if (!extractedContent || extractedContent.length < 500) {
-    const allText = cleanHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-    if (allText.length > extractedContent.length) {
-      extractedContent = allText;
-    }
-  }
-
-  // Clean up the extracted content but preserve paragraph structure
+  // Clean up the extracted content
   extractedContent = extractedContent
     .replace(/\[.*?\]/g, '') // Remove [brackets]
-    .replace(/\(.*?\)/g, '') // Remove (parentheses) that might contain metadata
     .replace(/Click here|Read more|Subscribe|Share|Advertisement|Loading\.\.\.|Related:|See also:|Skip to content|Sign In|Sign Up|View All|Load More|Copyright \d{4}/gi, '') // Remove common noise
     .replace(/^\s*[-•]\s*/gm, '') // Remove bullet points
     .trim();
@@ -232,43 +185,8 @@ export function extractArticleTextFromHTML(html: string): string {
   // Decode HTML entities
   extractedContent = decodeHtmlEntities(extractedContent);
 
-  // Only apply paragraph formatting if we already have paragraph breaks
-  if (extractedContent.includes('\n\n')) {
-    // Clean up existing paragraph structure
-    const paragraphs = extractedContent.split('\n\n');
-    extractedContent = paragraphs
-      .map(para => para.replace(/\s+/g, ' ').trim()) // Normalize spaces within each paragraph
-      .filter(para => para.length > 20) // Remove very short paragraphs
-      .join('\n\n'); // Rejoin with proper paragraph breaks
-  } else {
-    // No paragraph structure detected - keep as single block but clean
-    extractedContent = extractedContent.replace(/\s+/g, ' ').trim();
-    
-    // Optionally add paragraph breaks for very long content with clear sentence patterns
-    if (extractedContent.length > 1000) {
-      extractedContent = extractedContent
-        .replace(/\.\s+([A-Z][a-z]{2,})/g, '.\n\n$1') // Add breaks before sentences starting with longer words
-        .replace(/\?\s+([A-Z][a-z]{2,})/g, '?\n\n$1')
-        .replace(/!\s+([A-Z][a-z]{2,})/g, '!\n\n$1');
-    }
-  }
-
-  console.log(`Extracted content length: ${extractedContent.length} characters`);
-  
-  // Clean up navigation and footer content
-  extractedContent = extractedContent
-    .replace(/News\s+News\s+Sections.*?Sign\s+In/gi, '') // Remove navigation
-    .replace(/Tags:.*$/gi, '') // Remove tags section
-    .replace(/Galleries.*$/gi, '') // Remove galleries section
-    .replace(/You\s+May\s+Also\s+Like.*$/gi, '') // Remove related articles
-    .replace(/Copyright.*?Privacy\s+Policy.*$/gi, '') // Remove footer
-    .replace(/\s+More\s+Reuters\s+/gi, ' ') // Clean Reuters attribution
-    .replace(/FILE\s+PHOTO:.*?Photo\s+/gi, '') // Remove photo captions
-    .replace(/By\s+[A-Z][a-z]+\s+[A-Z][a-z]+.*?\d{4}.*?p\.m\.\s+/gi, ''); // Clean author lines
-
   // Final cleanup
   extractedContent = extractedContent
-    .replace(/\s+/g, ' ') // Normalize whitespace again
     .replace(/\n\s*\n\s*\n/g, '\n\n') // Max 2 line breaks
     .trim();
   
@@ -278,11 +196,36 @@ export function extractArticleTextFromHTML(html: string): string {
   return extractedContent;
 }
 
+// Extract paragraphs: first try <p> tags, fallback to all text
+function extractParagraphsFromHTML(html: string): string {
+  // First try: extract only <p> tags
+  const paragraphs = html.match(/<p[^>]*>([\s\S]*?)<\/p>/gi) || [];
+  
+  if (paragraphs.length > 0) {
+    // Found <p> tags - extract and join with paragraph breaks
+    const paragraphTexts = paragraphs
+      .map(p => {
+        const text = p.replace(/<[^>]*>/g, '').trim();
+        return decodeHtmlEntities(text);
+      })
+      .filter(p => p.length > 20 && !isNavigationContent(p));
+    
+    if (paragraphTexts.length > 0) {
+      return paragraphTexts.join('\n\n');
+    }
+  }
+  
+  // Fallback: no good <p> tags found, extract all text
+  const allText = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  return decodeHtmlEntities(allText);
+}
+
 /**
- * Decode HTML entities
+ * Decode HTML entities (comprehensive)
  */
 function decodeHtmlEntities(text: string): string {
   return text
+    // Basic entities
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
@@ -290,13 +233,39 @@ function decodeHtmlEntities(text: string): string {
     .replace(/&#x27;/g, "'")
     .replace(/&#39;/g, "'")
     .replace(/&nbsp;/g, ' ')
-    .replace(/&ndash;/g, '–')
-    .replace(/&mdash;/g, '—')
-    .replace(/&hellip;/g, '...')
-    .replace(/&rsquo;/g, "'")
-    .replace(/&lsquo;/g, "'")
-    .replace(/&rdquo;/g, '"')
-    .replace(/&ldquo;/g, '"');
+    // Quotes and dashes
+    .replace(/&#8220;|&ldquo;/g, '"')  // Left double quote
+    .replace(/&#8221;|&rdquo;/g, '"')  // Right double quote
+    .replace(/&#8216;|&lsquo;/g, "'")  // Left single quote
+    .replace(/&#8217;|&rsquo;/g, "'")  // Right single quote
+    .replace(/&#8211;|&ndash;/g, '–')  // En dash
+    .replace(/&#8212;|&mdash;/g, '—')  // Em dash
+    .replace(/&#8230;|&hellip;/g, '…') // Ellipsis
+    // Common numeric entities
+    .replace(/&#8242;/g, "'")          // Prime (apostrophe)
+    .replace(/&#8243;/g, '"')          // Double prime
+    .replace(/&#8482;/g, '™')          // Trademark
+    .replace(/&#169;|&copy;/g, '©')    // Copyright
+    .replace(/&#174;|&reg;/g, '®')     // Registered
+    .replace(/&#176;/g, '°')           // Degree symbol
+    .replace(/&#8594;/g, '→')          // Right arrow
+    .replace(/&#8592;/g, '←')          // Left arrow
+    // Generic numeric entity handler for any remaining &#NNNN;
+    .replace(/&#(\d+);/g, (match, num) => {
+      try {
+        return String.fromCharCode(parseInt(num, 10));
+      } catch (e) {
+        return match; // Keep original if conversion fails
+      }
+    })
+    // Generic hex entity handler for any remaining &#xNNNN;
+    .replace(/&#x([0-9a-fA-F]+);/g, (match, hex) => {
+      try {
+        return String.fromCharCode(parseInt(hex, 16));
+      } catch (e) {
+        return match; // Keep original if conversion fails
+      }
+    });
 }
 
 /**

@@ -75,6 +75,7 @@ model Article {
   imageUrl        String?  // Article image URL
   // Removed vectorEmbedding; embeddings now stored per chunk in Chunk collection
   chunks          ArticleChunk[]
+  chunkCount      Int      @default(0) // Number of chunks generated for this article
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

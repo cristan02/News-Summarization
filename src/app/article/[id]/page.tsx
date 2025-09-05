@@ -412,6 +412,11 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                     Copy
                   </Button>
                 </div>
+                <div className="mt-2 p-3 bg-muted/50 rounded-lg border-l-4 border-orange-500">
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Disclaimer:</strong> Article content may not retain the exact formatting, layout, or visual elements of the original publication. This is an extracted text version for reading convenience.
+                  </p>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="prose prose-sm max-w-none dark:prose-invert">
