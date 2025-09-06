@@ -18,7 +18,6 @@ interface TagSelectorProps {
 export function TagSelector({ tags, selectedTags, onTagToggle, className }: TagSelectorProps) {
   return (
     <div className={cn("space-y-4", className)}>
-      <h2 className="text-xl font-semibold text-foreground">Choose Your Interests</h2>
       <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-[--grid-fluid] gap-3">
         {tags.map(tag => (
           <Button
@@ -33,7 +32,7 @@ export function TagSelector({ tags, selectedTags, onTagToggle, className }: TagS
                 : "hover:bg-accent hover:text-accent-foreground"
             )}
           >
-            <div className="truncate">{tag.name}</div>
+            <div className="truncate font-medium">#{tag.name}</div>
           </Button>
         ))}
       </div>

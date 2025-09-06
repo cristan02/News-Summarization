@@ -11,34 +11,32 @@ interface AddTagFormProps {
 }
 
 export function AddTagForm({ newTag, onNewTagChange, onAddTag, className }: AddTagFormProps) {
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      onAddTag()
-    }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onAddTag()
   }
 
   return (
     <div className={cn("space-y-3", className)}>
       <h3 className="text-lg font-semibold text-foreground">Add Custom Tag</h3>
-      <div className="space-y-2">
+      <form onSubmit={handleSubmit} className="space-y-2">
         <Input
           type="text"
           value={newTag}
           onChange={(e) => onNewTagChange(e.target.value)}
           placeholder="Enter a new tag..."
-          onKeyPress={handleKeyPress}
           className="w-full"
         />
         <Button
-          onClick={onAddTag}
-          variant="secondary"
-          className="w-full"
+          type="submit"
           disabled={!newTag.trim()}
+          className="w-full"
+          variant="outline"
         >
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="w-4 h-4 mr-2" />
           Add Tag
         </Button>
-      </div>
+      </form>
     </div>
   )
 }

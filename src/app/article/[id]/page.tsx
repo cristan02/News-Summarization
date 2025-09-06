@@ -23,30 +23,9 @@ import {
 } from "@/components/ui/dialog"
 import { Loader2, ArrowLeft, ExternalLink, Send, Clock, User, Bot, Copy, MessageCircle, FileText } from "lucide-react"
 import { toast } from "sonner"
+import { Article, ChatMessage } from '@/types'
 
-interface Article {
-  id: string
-  title: string
-  link: string
-  content: string
-  summary: string // renamed from shortSummary
-  tag: string // Single tag instead of array
-  source?: string
-  author?: string
-  publishedAt?: string
-  imageUrl?: string
-  createdAt: string
-  updatedAt: string
-}
-
-interface ChatMessage {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  timestamp: string
-}
-
-export default function ArticleDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [article, setArticle] = useState<Article | null>(null)
@@ -58,6 +37,9 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   const [isSummaryOpen, setIsSummaryOpen] = useState(false)
   const [articleId, setArticleId] = useState<string>('')
   const chatEndRef = useRef<HTMLDivElement>(null)
+  const mobileChatEndRef = useRef<HTMLDivElement>(null)
+  const chatContainerRef = useRef<HTMLDivElement>(null)
+  const mobileChatContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const getParams = async () => {
@@ -78,18 +60,24 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     try {
       const response = await fetch(`/api/articles/${articleId}`)
       if (response.ok) {
-        const data = await response.json()
-        setArticle(data)
-        
-        // Initialize chat with a welcome message
-        setChatMessages([{
-          id: '1',
-          role: 'assistant',
-          content: `Hello! I'm here to help you discuss this article: "${data.title}". Feel free to ask me questions about the content, request summaries, or discuss any aspects of the news story.`,
-          timestamp: new Date().toISOString()
-        }])
+        const result = await response.json()
+        if (result.success && result.data) {
+          setArticle(result.data)
+          
+          // Initialize chat with a welcome message
+          setChatMessages([{
+            id: '1',
+            role: 'assistant',
+            content: `Hello! I'm here to help you discuss this article: "${result.data.title}". Feel free to ask me questions about the content, request summaries, or discuss any aspects of the news story.`,
+            timestamp: new Date().toISOString()
+          }])
+        } else {
+          toast.error(result.error || "Article not found")
+          router.push('/all-feed')
+        }
       } else {
-        toast.error("Article not found")
+        const errorResult = await response.json()
+        toast.error(errorResult.error || "Article not found")
         router.push('/all-feed')
       }
     } catch (error) {
@@ -107,25 +95,28 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
   }, [status, router, articleId])
 
   useEffect(() => {
-    scrollToBottom()
+    scrollToBottomDesktop()
+    scrollToBottomMobile()
   }, [chatMessages])
 
   useEffect(() => {
-    // Scroll to bottom when user starts typing
-    if (newMessage.length > 0) {
-      scrollToBottom()
-    }
-  }, [newMessage])
-
-  useEffect(() => {
-    // Scroll to bottom when chat loading starts
+    // Only scroll when chat is loading, not when typing
     if (isChatLoading) {
-      scrollToBottom()
+      scrollToBottomDesktop()
+      scrollToBottomMobile()
     }
   }, [isChatLoading])
 
-  const scrollToBottom = () => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  const scrollToBottomDesktop = () => {
+    if (chatEndRef.current && chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
+    }
+  }
+
+  const scrollToBottomMobile = () => {
+    if (mobileChatEndRef.current && mobileChatContainerRef.current) {
+      mobileChatContainerRef.current.scrollTop = mobileChatContainerRef.current.scrollHeight
+    }
   }
 
   const sendMessage = async () => {
@@ -188,8 +179,9 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     toast.success("Copied to clipboard")
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+  const formatDate = (date: string | Date) => {
+    const dateObj = date instanceof Date ? date : new Date(date);
+    return dateObj.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -231,7 +223,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
     <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <div className="container mx-auto p-6 space-y-6">
         {/* Header with Navigation and Actions */}
-        <div className="flex items-center justify-between lg:pr-80">
+        <div className="flex items-center justify-between">
           <Button 
             variant="outline" 
             onClick={() => router.push('/all-feed')}
@@ -282,14 +274,17 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                       AI Article Assistant
                     </SheetTitle>
                     <p className="text-sm text-muted-foreground mt-2">
-                      Ask questions about this article. I'll search through the content to find relevant information and provide detailed answers.
+                      Ask questions about this article. I&apos;ll search through the content to find relevant information and provide detailed answers.
                     </p>
                   </SheetHeader>
                   
                   {/* Mobile Chat Interface */}
                   <div className="flex-1 flex flex-col mt-6 min-h-0">
                     {/* Chat Messages */}
-                    <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2">
+                    <div 
+                      ref={mobileChatContainerRef}
+                      className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2"
+                    >
                       {chatMessages.map((message) => (
                         <div
                           key={message.id}
@@ -331,7 +326,7 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
                         </div>
                       )}
                       
-                      <div ref={chatEndRef} />
+                      <div ref={mobileChatEndRef} />
                     </div>
 
                     {/* Mobile Chat Input */}
@@ -360,96 +355,95 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
         </div>
 
         {/* Main Content Layout */}
-        <div className="relative">
+        <div className="flex gap-6">
           {/* Article Content */}
-          <div className="lg:pr-80">
-            <div className="space-y-6">
-              {/* Title and Header */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <CardTitle className="text-3xl mb-3">{article.title}</CardTitle>
-                      
-                      {/* Tag and Source Information */}
-                      <div className="flex items-center gap-3 mb-2">
-                        {article.tag && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-muted-foreground">Topic:</span>
-                            <Badge variant="secondary" className="text-sm">
-                              {article.tag}
-                            </Badge>
-                          </div>
-                        )}
-                        {article.source && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-muted-foreground">Source:</span>
-                            <Badge variant="outline" className="text-sm">
-                              {article.source}
-                            </Badge>
-                          </div>
-                        )}
-                      </div>
+          <div className="flex-1 max-w-4xl space-y-6">
+            {/* Title and Header */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <CardTitle className="text-3xl mb-3 leading-tight">{article.title}</CardTitle>
+                    
+                    {/* Tag and Source Information */}
+                    <div className="flex items-center gap-3 mb-2">
+                      {article.tag && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-muted-foreground">Topic:</span>
+                          <Badge variant="secondary" className="text-sm">
+                            {article.tag}
+                          </Badge>
+                        </div>
+                      )}
+                      {article.source && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-muted-foreground">Source:</span>
+                          <Badge variant="outline" className="text-sm">
+                            {article.source}
+                          </Badge>
+                        </div>
+                      )}
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => window.open(article.link, '_blank')}
-                    >
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      Read Original
-                    </Button>
                   </div>
-                  
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => window.open(article.link, '_blank')}
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Read Original
+                  </Button>
+                </div>
+                
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    {formatDate(article.createdAt)}
+                  </div>
+                  {article.author && (
                     <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      {formatDate(article.createdAt)}
+                      <User className="w-4 h-4" />
+                      <span>By {article.author}</span>
                     </div>
-                    {article.author && (
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4" />
-                        <span>By {article.author}</span>
-                      </div>
-                    )}
-                  </div>
-                </CardHeader>
-              </Card>
+                  )}
+                </div>
+              </CardHeader>
+            </Card>
 
-              {/* Full Content */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">Article Content</CardTitle>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => copyToClipboard(article.content)}
-                    >
-                      <Copy className="w-4 h-4 mr-2" />
-                      Copy
-                    </Button>
+            {/* Full Content */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Article Content</CardTitle>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => copyToClipboard(article.content)}
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy
+                  </Button>
+                </div>
+                <div className="mt-2 p-3 bg-muted/50 rounded-lg border-l-4 border-orange-500">
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Disclaimer:</strong> Article content may not retain the exact formatting, layout, or visual elements of the original publication. This is an extracted text version for reading convenience.
+                  </p>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="prose prose-sm max-w-none dark:prose-invert">
+                  <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                    {article.content || "Content not available. Please visit the original article link above."}
                   </div>
-                  <div className="mt-2 p-3 bg-muted/50 rounded-lg border-l-4 border-orange-500">
-                    <p className="text-xs text-muted-foreground">
-                      <strong>Disclaimer:</strong> Article content may not retain the exact formatting, layout, or visual elements of the original publication. This is an extracted text version for reading convenience.
-                    </p>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="prose prose-sm max-w-none dark:prose-invert">
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                      {article.content}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
+                
 
           {/* Fixed Chat Interface - Only visible on large screens */}
-          <div className="hidden lg:block fixed top-20 right-6 w-80 h-[calc(100vh-8rem)] z-30">
-            <Card className="h-full shadow-lg border-2">
+          <div className="hidden lg:block w-80 sticky top-6">
+            <Card className="h-[calc(100vh-8rem)] shadow-lg border-2">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center">
                   <Bot className="w-4 h-4 mr-2" />
@@ -462,7 +456,10 @@ export default function ArticleDetailPage({ params }: { params: Promise<{ id: st
               
               <CardContent className="flex flex-col h-[calc(100%-4rem)] p-3">
                 {/* Chat Messages */}
-                <div className="flex-1 overflow-y-auto space-y-2 mb-3 scrollbar-hide">
+                <div 
+                  ref={chatContainerRef}
+                  className="flex-1 overflow-y-auto space-y-2 mb-3 scrollbar-hide"
+                >
                   {chatMessages.map((message) => (
                     <div
                       key={message.id}

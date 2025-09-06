@@ -27,14 +27,8 @@ export async function GET() {
 
     return NextResponse.json({
       hasPreferences: user.preferredTags.length > 0,
-      userId: user.id,
-      preferences: {
-        id: user.id,
-        userId: user.id,
-        preferredTags: user.preferredTags,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
+      preferredTags: user.preferredTags,
+      userId: user.id
     })
   } catch (error) {
     console.error('Error checking user preferences:', error)

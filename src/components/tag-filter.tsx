@@ -1,18 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Sheet, 
-  SheetContent, 
-  SheetHeader, 
-  SheetTitle, 
-  SheetTrigger 
-} from '@/components/ui/sheet';
-import { Search, Filter, X, Hash } from 'lucide-react';
+import { Search, X, Hash } from 'lucide-react';
 
 interface TagFilterProps {
   availableTags: string[];
@@ -34,13 +26,12 @@ export default function TagFilter({
   title = "Filter by Tags"
 }: TagFilterProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const filteredTags = availableTags.filter(tag =>
-    tag.toLowerCase().includes(searchTerm.toLowerCase())
+    tag && typeof tag === 'string' && tag.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const TagsList = ({ tags, isCompact = false }: { tags: string[], isCompact?: boolean }) => (
+  return (
     <div className="space-y-4">
       {/* Search */}
       <div className="relative">
@@ -89,7 +80,7 @@ export default function TagFilter({
           Available Tags ({filteredTags.length})
         </h4>
         <div className={`flex flex-wrap gap-1.5 ${
-          !showAllTags && !isCompact ? 'max-h-32 overflow-y-auto' : ''
+          !showAllTags ? 'max-h-48 overflow-y-auto' : 'max-h-96 overflow-y-auto'
         }`}>
           {filteredTags.map((tag) => (
             <Badge
@@ -113,50 +104,5 @@ export default function TagFilter({
         </div>
       )}
     </div>
-  );
-
-  // Mobile/tablet view with sheet
-  const MobileTagFilter = () => (
-    <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-      <SheetTrigger asChild>
-        <Button variant="outline" className="md:hidden">
-          <Filter className="w-4 h-4 mr-2" />
-          Tags {selectedTags.length > 0 && `(${selectedTags.length})`}
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="bottom" className="h-[80vh]">
-        <SheetHeader>
-          <SheetTitle className="flex items-center">
-            <Hash className="w-5 h-5 mr-2" />
-            {title}
-          </SheetTitle>
-        </SheetHeader>
-        <div className="mt-6 overflow-y-auto">
-          <TagsList tags={filteredTags} isCompact={true} />
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
-
-  // Desktop view with card
-  const DesktopTagFilter = () => (
-    <Card className="hidden md:block">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center">
-          <Hash className="w-5 h-5 mr-2" />
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <TagsList tags={filteredTags} />
-      </CardContent>
-    </Card>
-  );
-
-  return (
-    <>
-      <MobileTagFilter />
-      <DesktopTagFilter />
-    </>
   );
 }

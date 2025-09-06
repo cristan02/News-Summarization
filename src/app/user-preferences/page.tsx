@@ -60,8 +60,8 @@ export default function UserPreferences() {
       const response = await fetch('/api/user-preferences')
       if (response.ok) {
         const data = await response.json()
-        if (data.preferences && data.preferences.preferredTags) {
-          setSelectedTags(data.preferences.preferredTags)
+        if (data.preferredTags) {
+          setSelectedTags(data.preferredTags)
         }
       }
     } catch (error) {
@@ -149,10 +149,22 @@ export default function UserPreferences() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <div className="container mx-auto p-6 space-y-8">
+        
+       
 
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Tags Selection - Takes up 3 columns */}
+
+           {/* Header Section */}
+        <div className=" space-y-4 lg:col-span-3">
+          <h2 className="text-xl font-semibold text-foreground">Choose Your Interests</h2>
+                <p className="text-muted-foreground">
+                     Select topics that interest you to personalize your news feed. We&apos;ll curate articles 
+                     based on your preferences to ensure you stay informed about what matters most to you.
+                   </p>
+        </div>
+
           <Card className="lg:col-span-3">
             <CardContent className="p-6">
               <TagSelector 

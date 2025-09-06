@@ -74,7 +74,7 @@ async function getHuggingFaceResponse(messages: Array<{role: string, content: st
       const response = await hf.chatCompletion({
         model: CHAT_MODEL,
         messages: messages,
-        max_tokens: 200,
+        max_tokens: 800,
         temperature: 0.7,
         // Specify provider for better reliability
         provider: 'cerebras'
@@ -94,7 +94,7 @@ async function getHuggingFaceResponse(messages: Array<{role: string, content: st
         model: CHAT_MODEL,
         inputs: prompt,
         parameters: {
-          max_new_tokens: 150,
+          max_new_tokens: 600,
           temperature: 0.7,
           return_full_text: false,
         },
@@ -171,10 +171,24 @@ async function generateRAGResponse(
     // Get AI response from Hugging Face Router
     const aiResponse = await getHuggingFaceResponse(messages);
     
-    // Ensure response is not too long and is helpful
+    // Clean up response but don't truncate
     let cleanResponse = aiResponse.trim();
-    if (cleanResponse.length > 500) {
-      cleanResponse = cleanResponse.substring(0, 500) + '...';
+    
+    // Only truncate if response is extremely long (over 1500 characters)
+    if (cleanResponse.length > 1500) {
+      // Find the last complete sentence within limit
+      const truncated = cleanResponse.substring(0, 1400);
+      const lastSentenceEnd = Math.max(
+        truncated.lastIndexOf('.'),
+        truncated.lastIndexOf('!'),
+        truncated.lastIndexOf('?')
+      );
+      
+      if (lastSentenceEnd > 800) {
+        cleanResponse = truncated.substring(0, lastSentenceEnd + 1);
+      } else {
+        cleanResponse = truncated + '...';
+      }
     }
     
     return cleanResponse || 'I apologize, but I couldn\'t generate a proper response. Could you try rephrasing your question?';

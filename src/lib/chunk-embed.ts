@@ -1,206 +1,266 @@
 import { PrismaClient, Article } from '@prisma/client'
 import { InferenceClient } from '@huggingface/inference'
+import { ChunkingOptions } from '@/types'
 
-// Initialize Hugging Face client for embeddings
+// Initialize clients
 const hf = new InferenceClient(process.env.HUGGINGFACE_API_KEY)
-
-// Best embedding model for RAG performance
 const EMBEDDING_MODEL = 'sentence-transformers/all-MiniLM-L6-v2'
 
-/**
- * Splits article content into chunks for RAG.
- */
-export function chunkText(
-  content: string,
-  options: { chunkSize?: number; overlap?: number; minChunkSize?: number } = {}
-): string[] {
-  const chunkSize = options.chunkSize ?? 1200; // target max chars
-  const overlap = options.overlap ?? 150;       // trailing chars of previous chunk to prepend for context
-  const minChunkSize = options.minChunkSize ?? Math.floor(chunkSize * 0.5); // allow slight growth to avoid word breaks
-
-  if (!content) return [];
-
-  // Normalize whitespace
-  const cleaned = content.replace(/\s+/g, ' ').trim();
-  if (cleaned.length <= chunkSize) return [cleaned];
-
-  // Sentence-based splitting first
-  const sentences = cleaned.match(/[^.!?]+[.!?]?/g) || [cleaned];
-
-  const rawChunks: string[] = [];
-  let buffer = '';
-
-  const pushBuffer = () => {
-    const trimmed = buffer.trim();
-    if (trimmed) rawChunks.push(trimmed);
-    buffer = '';
-  };
-
-  for (const sentence of sentences) {
-    // If adding the sentence would exceed chunkSize and buffer is already reasonably sized, flush
-    if (buffer.length > 0 && (buffer + sentence).length > chunkSize && buffer.length >= minChunkSize) {
-      pushBuffer();
-    }
-    buffer += sentence;
-  }
-  pushBuffer();
-
-  // Now refine each raw chunk to ensure we don't cut mid-word when applying overlap logic.
-  // If any chunk exceeds chunkSize significantly (because a single sentence was huge), we hard-wrap by whitespace.
-  const finalChunks: string[] = [];
-  for (const chunk of rawChunks) {
-    if (chunk.length <= chunkSize + 100) { // allow slight overflow to preserve words
-      finalChunks.push(chunk);
-      continue;
-    }
-    // Break long chunk by whitespace without breaking words
-    let start = 0;
-    while (start < chunk.length) {
-      let end = Math.min(start + chunkSize, chunk.length);
-      if (end < chunk.length) {
-        // Move end backward to the last space to avoid cutting word
-        const spaceIdx = chunk.lastIndexOf(' ', end - 1);
-        if (spaceIdx > start + 50) { // ensure we still make progress
-          end = spaceIdx;
-        }
-      }
-      finalChunks.push(chunk.slice(start, end).trim());
-      start = end;
-    }
-  }
-
-  // Apply overlap: build overlappedChunks from finalChunks
-  if (overlap > 0 && finalChunks.length > 1) {
-    const withOverlap: string[] = [];
-    for (let i = 0; i < finalChunks.length; i++) {
-      if (i === 0) {
-        withOverlap.push(finalChunks[i]);
-      } else {
-        const prev = finalChunks[i - 1];
-        const tail = prev.slice(-overlap);
-        withOverlap.push((tail + ' ' + finalChunks[i]).trim());
-      }
-    }
-    return withOverlap;
-  }
-
-  return finalChunks;
+export interface ChunkProcessResult {
+  created: number
+  skippedExisting: boolean
+  articleId: string
 }
 
 /**
- * Generate semantic embeddings using Hugging Face.
+ * Fast, lightweight recursive text splitter (no dependencies)
+ */
+function recursiveTextSplit(
+  text: string, 
+  chunkSize: number = 1200, 
+  chunkOverlap: number = 150
+): string[] {
+  if (!text.trim()) return [];
+  if (text.length <= chunkSize) return [text.trim()];
+
+  const separators = ['\n\n', '\n', '. ', '! ', '? ', ', ', ' ', ''];
+  const chunks: string[] = [];
+  
+  function splitBySeparator(text: string, separators: string[]): string[] {
+    if (separators.length === 0 || text.length <= chunkSize) {
+      return [text];
+    }
+    
+    const separator = separators[0];
+    const parts = text.split(separator);
+    const result: string[] = [];
+    let currentChunk = '';
+    
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i] + (i < parts.length - 1 ? separator : '');
+      
+      if (currentChunk.length + part.length <= chunkSize) {
+        currentChunk += part;
+      } else {
+        if (currentChunk) {
+          // Try to split the current chunk further if it's still too big
+          if (currentChunk.length > chunkSize) {
+            result.push(...splitBySeparator(currentChunk, separators.slice(1)));
+          } else {
+            result.push(currentChunk.trim());
+          }
+        }
+        currentChunk = part;
+      }
+    }
+    
+    if (currentChunk.trim()) {
+      if (currentChunk.length > chunkSize) {
+        result.push(...splitBySeparator(currentChunk, separators.slice(1)));
+      } else {
+        result.push(currentChunk.trim());
+      }
+    }
+    
+    return result;
+  }
+  
+  const rawChunks = splitBySeparator(text, separators);
+  
+  // Apply overlap
+  if (chunkOverlap > 0 && rawChunks.length > 1) {
+    for (let i = 0; i < rawChunks.length; i++) {
+      if (i === 0) {
+        chunks.push(rawChunks[i]);
+      } else {
+        const prevChunk = rawChunks[i - 1];
+        const overlap = prevChunk.slice(-chunkOverlap);
+        chunks.push((overlap + ' ' + rawChunks[i]).trim());
+      }
+    }
+  } else {
+    chunks.push(...rawChunks);
+  }
+  
+  return chunks.filter(chunk => chunk.length > 0);
+}
+
+/**
+ * Smart text chunking using lightweight recursive splitter
+ */
+export async function chunkText(
+  content: string,
+  options: { chunkSize?: number; overlap?: number } = {}
+): Promise<string[]> {
+  if (!content.trim()) return [];
+
+  const chunkSize = options.chunkSize ?? 1200;
+  const overlap = options.overlap ?? 150;
+
+  return recursiveTextSplit(content, chunkSize, overlap);
+}
+
+/**
+ * Generate embeddings with better error handling and batch support
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
   if (!process.env.HUGGINGFACE_API_KEY) {
-    console.warn('No Hugging Face API key found, using fallback embedding');
-    return fallbackDeterministicEmbedding(text);
+    throw new Error('Hugging Face API key not configured');
   }
 
-  // Clean and truncate text for embedding
-  const cleanText = text.trim().slice(0, 512); // Model has 512 token limit
-  if (!cleanText) {
-    return new Array(384).fill(0); // MiniLM embedding dimension
-  }
+  const cleanText = text.trim().slice(0, 512);
+  if (!cleanText) return new Array(384).fill(0);
 
   try {
     const result = await hf.featureExtraction({
       model: EMBEDDING_MODEL,
       inputs: cleanText,
-      // Specify provider to ensure embedding model compatibility
       provider: 'hf-inference'
     });
     
-    // Handle different response formats
-    let embedding: number[];
-    if (Array.isArray(result) && Array.isArray(result[0])) {
-      embedding = result[0] as number[];
-    } else if (Array.isArray(result)) {
-      embedding = result as number[];
-    } else {
-      throw new Error('Unexpected embedding format');
-    }
+    // Simplified response handling with proper typing
+    const embedding = Array.isArray(result[0]) ? result[0] as number[] : result as number[];
     
-    // Normalize the embedding
+    // L2 normalize
     const norm = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0)) || 1;
     return embedding.map(val => val / norm);
     
   } catch (error) {
-    // For now, log the error but use deterministic embedding as it's more reliable
-    console.warn(`HF embedding failed, using deterministic fallback:`, error.message || error);
-    return fallbackDeterministicEmbedding(text);
+    console.error('Embedding failed:', error);
+    throw error;
   }
 }
 
 /**
- * Fallback deterministic embedding when HF API is unavailable.
+ * Batch generate embeddings for better performance
  */
-function fallbackDeterministicEmbedding(text: string, dim = 384): number[] {
-  const vec = new Array(dim).fill(0);
-  for (let i = 0; i < text.length; i++) {
-    const code = text.charCodeAt(i);
-    vec[i % dim] += code / 255;
+export async function generateEmbeddingsBatch(texts: string[]): Promise<number[][]> {
+  if (texts.length === 0) return [];
+  if (texts.length === 1) return [await generateEmbedding(texts[0])];
+
+  // Process in smaller batches to avoid API limits
+  const batchSize = 5;
+  const results: number[][] = [];
+  
+  for (let i = 0; i < texts.length; i += batchSize) {
+    const batch = texts.slice(i, i + batchSize);
+    const batchResults = await Promise.all(
+      batch.map(text => generateEmbedding(text))
+    );
+    results.push(...batchResults);
+    
+    // Small delay between batches
+    if (i + batchSize < texts.length) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
   }
-  // L2 normalize
-  const norm = Math.sqrt(vec.reduce((s, v) => s + v * v, 0)) || 1;
-  return vec.map(v => Number((v / norm).toFixed(6)));
+  
+  return results;
 }
 
 /**
- * Generate embeddings for article chunks.
- */
-export async function embedChunk(text: string): Promise<number[]> {
-  return await generateEmbedding(text);
-}
-
-export interface ChunkProcessResult {
-  created: number;
-  skippedExisting: boolean;
-}
-
-/**
- * Creates ArticleChunk records with embeddings if they don't exist.
+ * Optimized article chunk creation with batch processing
  */
 export async function ensureArticleChunks(
   prisma: PrismaClient,
   article: Article,
   options: { force?: boolean; chunkSize?: number; overlap?: number } = {}
 ): Promise<ChunkProcessResult> {
-  const existingCount = await prisma.articleChunk.count({ where: { articleId: article.id } });
+  // Check existing chunks
+  const existingCount = await prisma.articleChunk.count({ 
+    where: { articleId: article.id } 
+  });
+  
   if (existingCount > 0 && !options.force) {
-    return { created: 0, skippedExisting: true };
+    return { created: 0, skippedExisting: true, articleId: article.id };
   }
 
-  if (existingCount > 0 && options.force) {
-    await prisma.articleChunk.deleteMany({ where: { articleId: article.id } });
+  // Clean up existing chunks if forcing recreation
+  if (existingCount > 0) {
+    await prisma.articleChunk.deleteMany({ 
+      where: { articleId: article.id } 
+    });
   }
 
-  const chunks = chunkText(article.content, { chunkSize: options.chunkSize, overlap: options.overlap });
-  if (chunks.length === 0) return { created: 0, skippedExisting: false };
+  // Generate chunks using optimized chunking
+  const chunks = await chunkText(article.content, {
+    chunkSize: options.chunkSize,
+    overlap: options.overlap
+  });
+  
+  if (chunks.length === 0) {
+    return { created: 0, skippedExisting: false, articleId: article.id };
+  }
 
+  // Batch generate embeddings for better performance
+  console.log(`Generating embeddings for ${chunks.length} chunks...`);
+  const embeddings = await generateEmbeddingsBatch(chunks);
+
+  // Prepare data for batch insert
   const now = new Date();
-  const data = await Promise.all(
-    chunks.map(async (chunkText, idx) => ({
-      articleId: article.id,
-      chunkText,
-      vectorEmbedding: await embedChunk(chunkText),
-      chunkIndex: idx,
-      createdAt: now,
-      updatedAt: now,
-    }))
-  );
+  const data = chunks.map((chunkText, idx) => ({
+    articleId: article.id,
+    chunkText,
+    vectorEmbedding: embeddings[idx],
+    chunkIndex: idx,
+    createdAt: now,
+    updatedAt: now,
+  }));
 
-  // createMany limitation: floats supported; if any issue fallback to sequential creates
+  // Bulk insert with fallback
   try {
     await prisma.articleChunk.createMany({ data });
   } catch (e) {
-    // Fallback one-by-one (mongo sometimes with large arrays?)
+    console.warn('Bulk insert failed, falling back to individual inserts');
     for (const row of data) {
       await prisma.articleChunk.create({ data: row });
     }
   }
 
-  // Update article with chunkCount
-  await prisma.article.update({ where: { id: article.id }, data: { chunkCount: data.length } });
+  // Update article chunk count
+  await prisma.article.update({
+    where: { id: article.id },
+    data: { chunkCount: data.length }
+  });
 
-  return { created: data.length, skippedExisting: false };
+  console.log(`✅ Created ${data.length} chunks for article ${article.id}`);
+  return { created: data.length, skippedExisting: false, articleId: article.id };
+}
+
+/**
+ * Calculate cosine similarity between two embeddings
+ */
+export function cosineSimilarity(a: number[], b: number[]): number {
+  if (a.length !== b.length) return 0;
+  
+  const dotProduct = a.reduce((sum, val, i) => sum + val * b[i], 0);
+  const normA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
+  const normB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
+  
+  return dotProduct / (normA * normB) || 0;
+}
+
+/**
+ * Find most similar chunks to a query embedding
+ */
+export async function findSimilarChunks(
+  prisma: PrismaClient,
+  queryEmbedding: number[],
+  limit: number = 5,
+  minSimilarity: number = 0.1
+) {
+  const chunks = await prisma.articleChunk.findMany({
+    include: { article: { select: { title: true, source: true } } }
+  });
+
+  const similarities = chunks
+    .map(chunk => ({
+      ...chunk,
+      similarity: cosineSimilarity(queryEmbedding, chunk.vectorEmbedding)
+    }))
+    .filter(chunk => chunk.similarity >= minSimilarity)
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, limit);
+
+  return similarities;
 }

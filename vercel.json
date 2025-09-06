@@ -1,12 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/cron/daily-news-fetch",
-      "schedule": "0 11 * * *"
-    },
-    {
-      "path": "/api/cron/weekly-cleanup",
-      "schedule": "0 3 * * 0"
+      "path": "/api/cron/daily-operations",
+      "schedule": "0 2 * * *"
     }
   ]
 }

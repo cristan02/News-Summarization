@@ -4,6 +4,7 @@ import { useSession, signOut } from 'next-auth/react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -57,15 +58,15 @@ export function Navbar() {
   }
 
   const getCurrentThemeIcon = () => {
-    if (!mounted) return <Sun className="h-5 w-5" />
+    if (!mounted) return <Sun className="h-7 w-7" />
     
     // Always resolve to actual theme (no system icon in toggle)
     const currentTheme = theme === 'system' ? systemTheme : theme
     
     if (currentTheme === 'dark') {
-      return <Moon className="h-5 w-5 text-blue-400" />
+      return <Moon className="h-7 w-7 text-blue-400" />
     } else {
-      return <Sun className="h-5 w-5 text-yellow-600" />
+      return <Sun className="h-7 w-7 text-yellow-600" />
     }
   }
 
@@ -160,9 +161,11 @@ export function Navbar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="relative h-9 w-9 rounded-full p-0 overflow-hidden">
               {session.user?.image ? (
-                <img
+                <Image
                   src={session.user.image}
                   alt="Profile"
+                  width={36}
+                  height={36}
                   className="h-full w-full rounded-full object-cover"
                 />
               ) : (

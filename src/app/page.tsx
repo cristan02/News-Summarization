@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Github, Settings, LogOut, CheckCircle } from "lucide-react"
 
-export default function HomePage() {
+export default function Page() {
   const { data: session, status } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [isRedirecting, setIsRedirecting] = useState(false)

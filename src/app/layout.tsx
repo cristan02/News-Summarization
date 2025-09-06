@@ -19,6 +19,18 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "News Hub - Personalized News",
   description: "Get personalized news recommendations based on your interests",
+  metadataBase: new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000'),
+  openGraph: {
+    title: 'News Hub - Personalized News',
+    description: 'Get personalized news recommendations based on your interests',
+    images: ['/logo.png'],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'News Hub - Personalized News',
+    description: 'Get personalized news recommendations based on your interests',
+    images: ['/logo.png'],
+  },
 };
 
 export default function RootLayout({
