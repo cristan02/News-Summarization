@@ -1,6 +1,10 @@
 import { PrismaClient, Article } from "@prisma/client";
 import { InferenceClient } from "@huggingface/inference";
-import { HUGGINGFACE_EMBEDDING_MODEL } from "@/lib/constants";
+import {
+  HUGGINGFACE_EMBEDDING_MODEL,
+  HUGGINGFACE_API_TIMEOUT,
+} from "@/lib/constants";
+import { AppError, HuggingFaceResponse } from "../types";
 
 // Initialize clients
 const hf = new InferenceClient(process.env.HUGGINGFACE_API_KEY);
@@ -100,40 +104,87 @@ export async function chunkText(
 }
 
 /**
- * Generate embeddings with better error handling and batch support
+ * Sleep utility for delays
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Generate embeddings with error handling and fallback to zero vector
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
   if (!process.env.HUGGINGFACE_API_KEY) {
-    throw new Error("Hugging Face API key not configured");
+    console.warn("Hugging Face API key not configured, returning zero vector");
+    return new Array(384).fill(0);
   }
 
   const cleanText = text.trim().slice(0, 512);
   if (!cleanText) return new Array(384).fill(0);
 
+  // Log the text being processed for debugging
+  console.log(
+    `🔤 Attempting to generate embedding for text (${cleanText.length} chars):`
+  );
+  console.log(
+    `"${cleanText.substring(0, 200)}${cleanText.length > 200 ? "..." : ""}"`
+  );
+
   try {
-    const result = await hf.featureExtraction({
+    // Use the latest HuggingFace Inference API pattern without custom timeout
+    // The library handles timeouts internally
+    const result: unknown = await hf.featureExtraction({
       model: EMBEDDING_MODEL,
       inputs: cleanText,
-      provider: "hf-inference",
     });
 
-    // Simplified response handling with proper typing
-    const embedding = Array.isArray(result[0])
-      ? (result[0] as number[])
-      : (result as number[]);
+    // Handle the latest HuggingFace Inference library response format
+    let embedding: number[];
+    if (Array.isArray(result)) {
+      embedding = result as number[];
+    } else if (result && typeof result === "object") {
+      // Check if it's an object with array properties (like { "0": [...] })
+      const resultObj = result as Record<string, unknown>;
+      if (Array.isArray(resultObj[0])) {
+        embedding = resultObj[0] as number[];
+      } else {
+        throw new Error(
+          `Unexpected embedding response format: ${typeof result}`
+        );
+      }
+    } else {
+      throw new Error(`Unexpected embedding response format: ${typeof result}`);
+    }
 
     // L2 normalize
     const norm =
       Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0)) || 1;
-    return embedding.map((val) => val / norm);
-  } catch (error) {
-    console.error("Embedding failed:", error);
-    throw error;
+    const finalEmbedding = embedding.map((val) => val / norm);
+
+    console.log(
+      `✅ Embedding generated successfully for text: "${cleanText.substring(
+        0,
+        100
+      )}..."`
+    );
+    return finalEmbedding;
+  } catch (error: unknown) {
+    const appError = error as AppError;
+    console.error(`❌ Embedding failed:`, appError.message || String(error));
+    console.error(`🔤 Failed text: "${cleanText.substring(0, 150)}..."`);
+
+    // No retries - fail immediately and return zero vector as fallback
+    console.warn(`❌ Embedding attempt failed - using zero vector fallback.`);
+    console.warn(
+      `📝 Problematic text (${cleanText.length} chars): "${cleanText}"`
+    );
+    console.warn(`🔧 Using zero vector fallback.`);
+    return new Array(384).fill(0);
   }
 }
 
 /**
- * Batch generate embeddings for better performance
+ * Batch generate embeddings with improved error handling and rate limiting
  */
 export async function generateEmbeddingsBatch(
   texts: string[]
@@ -141,20 +192,44 @@ export async function generateEmbeddingsBatch(
   if (texts.length === 0) return [];
   if (texts.length === 1) return [await generateEmbedding(texts[0])];
 
-  // Process in smaller batches to avoid API limits
-  const batchSize = 5;
+  console.log(
+    `Generating embeddings for ${texts.length} chunks with rate limiting...`
+  );
+
+  // Process sequentially to avoid overwhelming the API
   const results: number[][] = [];
+  let consecutiveFailures = 0;
+  const maxConsecutiveFailures = 3; // Circuit breaker threshold
 
-  for (let i = 0; i < texts.length; i += batchSize) {
-    const batch = texts.slice(i, i + batchSize);
-    const batchResults = await Promise.all(
-      batch.map((text) => generateEmbedding(text))
-    );
-    results.push(...batchResults);
+  for (let i = 0; i < texts.length; i++) {
+    console.log(`Processing embedding ${i + 1}/${texts.length}...`);
 
-    // Small delay between batches
-    if (i + batchSize < texts.length) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
+    // Circuit breaker: stop if too many consecutive failures
+    if (consecutiveFailures >= maxConsecutiveFailures) {
+      console.warn(
+        `Circuit breaker activated: ${maxConsecutiveFailures} consecutive embedding failures. Using zero vectors for remaining chunks.`
+      );
+      // Fill remaining with zero vectors
+      for (let j = i; j < texts.length; j++) {
+        results.push(new Array(384).fill(0));
+      }
+      break;
+    }
+
+    try {
+      const embedding = await generateEmbedding(texts[i]);
+      results.push(embedding);
+      consecutiveFailures = 0; // Reset counter on success
+
+      // Add delay between API calls to respect rate limits
+      if (i < texts.length - 1) {
+        await sleep(500); // 500ms delay between calls
+      }
+    } catch (error) {
+      console.error(`Failed to generate embedding for chunk ${i + 1}:`, error);
+      consecutiveFailures++;
+      // Use zero vector as fallback
+      results.push(new Array(384).fill(0));
     }
   }
 
@@ -195,9 +270,17 @@ export async function ensureArticleChunks(
     return { created: 0, skippedExisting: false, articleId: article.id };
   }
 
-  // Batch generate embeddings for better performance
+  // Batch generate embeddings with better error handling
   console.log(`Generating embeddings for ${chunks.length} chunks...`);
-  const embeddings = await generateEmbeddingsBatch(chunks);
+  let embeddings: number[][];
+
+  try {
+    embeddings = await generateEmbeddingsBatch(chunks);
+  } catch (error) {
+    console.error("Batch embedding generation failed, using fallback:", error);
+    // Create zero vectors as fallback
+    embeddings = chunks.map(() => new Array(384).fill(0));
+  }
 
   // Prepare data for batch insert
   const now = new Date();
@@ -213,11 +296,29 @@ export async function ensureArticleChunks(
   // Bulk insert with fallback
   try {
     await prisma.articleChunk.createMany({ data });
-  } catch {
-    console.warn("Bulk insert failed, falling back to individual inserts");
+    console.log(
+      `Successfully created ${chunks.length} chunks for article ${article.id}`
+    );
+  } catch (insertError) {
+    console.warn(
+      "Bulk insert failed, falling back to individual inserts:",
+      insertError
+    );
+    let successCount = 0;
     for (const row of data) {
-      await prisma.articleChunk.create({ data: row });
+      try {
+        await prisma.articleChunk.create({ data: row });
+        successCount++;
+      } catch (individualError) {
+        console.error(
+          `Failed to insert chunk ${row.chunkIndex}:`,
+          individualError
+        );
+      }
     }
+    console.log(
+      `Individual insert completed: ${successCount}/${data.length} chunks created`
+    );
   }
 
   // Update article chunk count

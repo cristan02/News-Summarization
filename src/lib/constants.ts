@@ -17,4 +17,5 @@ export const HUGGINGFACE_EMBEDDING_MODEL =
 
 export const DEFAULT_RAG_CHAT_MODEL = "meta-llama/Llama-3.1-8B-Instruct";
 
-export const DEFAULT_API_TIMEOUT = 10000; // ms
+export const DEFAULT_API_TIMEOUT = 30000; // Increased from 10s to 30s
+export const HUGGINGFACE_API_TIMEOUT = 30000; // Specific timeout for HuggingFace APIs

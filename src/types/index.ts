@@ -68,6 +68,32 @@ export interface ChunkingOptions {
   force?: boolean;
 }
 
+// Error handling types
+export interface AppError extends Error {
+  message: string;
+  name: string;
+  code?: string;
+  status?: number;
+}
+
+export interface APIError extends AppError {
+  response?: {
+    status: number;
+    statusText: string;
+    data?: unknown;
+  };
+}
+
+export interface EmbeddingResult {
+  embedding?: number[];
+  error?: string;
+}
+
+export interface HuggingFaceResponse {
+  [key: number]: number[];
+  length?: number;
+}
+
 // ==================== TYPE GUARDS ====================
 
 export function isValidExternalNewsArticle(
@@ -93,5 +119,17 @@ export function isCompleteArticle(
     typeof (article as Article).content === "string" &&
     typeof (article as Article).summary === "string" &&
     typeof (article as Article).tag === "string"
+  );
+}
+
+export function isValidUserPreferences(
+  preferences: unknown
+): preferences is UserPreferences {
+  return (
+    typeof preferences === "object" &&
+    preferences !== null &&
+    typeof (preferences as UserPreferences).hasPreferences === "boolean" &&
+    Array.isArray((preferences as UserPreferences).preferredTags) &&
+    typeof (preferences as UserPreferences).userId === "string"
   );
 }

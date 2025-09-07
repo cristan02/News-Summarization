@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -37,6 +37,13 @@ export default function FeedLayout({
     refreshArticles
   } = useArticles({ filterByPreferences: type === 'personalized' })
 
+  // Memoize user preferred tags to prevent unnecessary re-renders
+  const preferredTagsString = userPreferences?.preferredTags ? JSON.stringify(userPreferences.preferredTags) : '';
+  const memoizedUserPreferredTags = useMemo(() =>
+    userPreferences?.preferredTags || [],
+    [userPreferences?.preferredTags, preferredTagsString]
+  );
+
   const {
     availableTags,
     selectedFilterTags,
@@ -44,7 +51,10 @@ export default function FeedLayout({
     handleTagSelect,
     handleTagRemove,
     clearAllTags
-  } = useTags()
+  } = useTags({
+    filterByUserPreferences: type === 'personalized',
+    userPreferredTags: memoizedUserPreferredTags
+  })
 
   const { filteredArticles } = useArticleFilter({
     articles,
@@ -57,9 +67,21 @@ export default function FeedLayout({
   useEffect(() => {
     if (isAuthenticated) {
       fetchUserPreferencesAndArticles()
+    }
+  }, [isAuthenticated, fetchUserPreferencesAndArticles])
+
+  useEffect(() => {
+    if (isAuthenticated) {
       fetchAvailableTags()
     }
-  }, [isAuthenticated, fetchUserPreferencesAndArticles, fetchAvailableTags])
+  }, [isAuthenticated, fetchAvailableTags])
+
+  // Re-fetch tags when user preferences are loaded
+  useEffect(() => {
+    if (isAuthenticated && userPreferences && type === 'personalized') {
+      fetchAvailableTags()
+    }
+  }, [isAuthenticated, userPreferences, type, fetchAvailableTags])
 
   if (authLoading || articlesLoading) {
     return (
