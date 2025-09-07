@@ -9,7 +9,6 @@ import {
   DEFAULT_SUMMARY_MAX_LENGTH,
   DEFAULT_SUMMARY_MIN_LENGTH,
   DEFAULT_ARTICLES_PER_TAG,
-  DEFAULT_MAX_TAGS,
 } from "@/lib/constants";
 
 const hf = new InferenceClient(process.env.HUGGINGFACE_API_KEY);
@@ -284,22 +283,21 @@ async function fetchFromNewsAPI(
  * Main function: Fetch tags from database and then fetch articles for each tag
  */
 export async function fetchArticlesWithFallback(
-  articlesPerTag: number = DEFAULT_ARTICLES_PER_TAG,
-  maxTags: number = DEFAULT_MAX_TAGS
+  articlesPerTag: number = DEFAULT_ARTICLES_PER_TAG
 ): Promise<ExternalNewsArticle[]> {
   console.log(
-    `🔍 Starting news fetch with ${articlesPerTag} articles per tag (max ${maxTags} tags)`
+    `🔍 Starting news fetch with ${articlesPerTag} articles per tag (processing ALL tags)`
   );
   console.log(
     `📊 API Keys available: GNews=${!!GNEWS_API_KEY}, NewsAPI=${!!NEWSAPI_KEY}`
   );
 
   // STEP 1: Get tags from database
-  console.log("📋 Fetching tags from database...");
+  console.log("📋 Fetching ALL tags from database...");
   const tags = await prisma.tag.findMany({
     select: { name: true, usageCount: true },
     orderBy: { usageCount: "desc" },
-    take: maxTags,
+    // Removed take: maxTags - now processes ALL tags
   });
 
   if (tags.length === 0) {
@@ -377,5 +375,5 @@ export async function fetchArticlesForQueries(
   );
   // This is a simplified compatibility function - it won't use the queries parameter
   // since the new function gets tags from the database
-  return fetchArticlesWithFallback(articlesPerQuery, queries.length);
+  return fetchArticlesWithFallback(articlesPerQuery);
 }

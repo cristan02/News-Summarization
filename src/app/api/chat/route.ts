@@ -4,13 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateEmbedding } from "@/lib/chunk-embed";
 import { InferenceClient } from "@huggingface/inference";
-import {
-  DEFAULT_RAG_CHAT_MODEL,
-  DEFAULT_RAG_CHAT_MAX_TOKENS,
-  DEFAULT_RAG_CHAT_TEMPERATURE,
-  DEFAULT_RAG_CHAT_PROVIDER,
-  DEFAULT_RAG_CHUNK_EMBEDDINGS_LIMIT,
-} from "@/lib/constants";
+import { DEFAULT_RAG_CHAT_MODEL } from "@/lib/constants";
 
 // Hugging Face configuration
 const HF_API_TOKEN = process.env.HUGGINGFACE_API_KEY;
@@ -40,7 +34,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
 async function findRelevantChunks(
   articleId: string,
   query: string,
-  limit: number = DEFAULT_RAG_CHUNK_EMBEDDINGS_LIMIT
+  limit: number = 5 // Hardcoded chunk embeddings limit
 ): Promise<string[]> {
   try {
     // Get query embedding using Hugging Face
@@ -87,10 +81,10 @@ async function getHuggingFaceResponse(
       const response = await hf.chatCompletion({
         model: CHAT_MODEL,
         messages: messages,
-        max_tokens: DEFAULT_RAG_CHAT_MAX_TOKENS,
-        temperature: DEFAULT_RAG_CHAT_TEMPERATURE,
+        max_tokens: 800, // Hardcoded max tokens
+        temperature: 0.7, // Hardcoded temperature
         // Specify provider for better reliability
-        provider: DEFAULT_RAG_CHAT_PROVIDER,
+        provider: "cerebras", // Hardcoded provider
       });
 
       if (response.choices && response.choices.length > 0) {

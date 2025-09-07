@@ -5,10 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { fetchArticlesWithFallback } from "@/lib/news-fetcher";
 import { ensureArticleChunks } from "@/lib/chunk-embed";
 import {
-  DEFAULT_CHUNK_EMBEDDING_SIZE,
-  DEFAULT_CHUNK_EMBEDDING_OVERLAP,
+  DEFAULT_ARTICLE_RETENTION_DAYS,
   DEFAULT_ARTICLES_PER_TAG,
-  DEFAULT_MAX_TAGS,
 } from "@/lib/constants";
 
 // Security check for cron jobs
@@ -86,9 +84,8 @@ async function executeDailyOperations() {
 
   // STEP 1: CLEANUP OLD DATA FIRST
   console.log("Step 1: Cleaning up old data...");
-
   const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - DEFAULT_ARTICLE_RETENTION_DAYS);
 
   // Delete old chunks first (due to foreign key constraints)
   const deletedChunks = await prisma.articleChunk.deleteMany({
@@ -143,19 +140,14 @@ async function executeDailyOperations() {
     articlesSaved: 0,
     articlesAlreadyExisted: 0,
     errors: 0,
-  };
-  // Fixed articles per tag
+  }; // Fixed articles per tag
   const articlesPerTag = DEFAULT_ARTICLES_PER_TAG;
-  const maxTags = DEFAULT_MAX_TAGS;
   console.log(
-    `Configured to fetch ${articlesPerTag} articles per tag (max ${maxTags} tags)`
+    `Configured to fetch ${articlesPerTag} articles per tag (processing ALL tags)`
   );
 
-  // Fetch articles (function will get tags from database internally)
-  const fetchedArticles = await fetchArticlesWithFallback(
-    articlesPerTag,
-    maxTags
-  );
+  // Fetch articles (function will get ALL tags from database)
+  const fetchedArticles = await fetchArticlesWithFallback(articlesPerTag);
 
   console.log(`Fetched ${fetchedArticles.length} articles total`);
 
@@ -203,8 +195,8 @@ async function executeDailyOperations() {
       // Generate chunks & embeddings
       try {
         const chunkResult = await ensureArticleChunks(prisma, savedArticle, {
-          chunkSize: DEFAULT_CHUNK_EMBEDDING_SIZE,
-          overlap: DEFAULT_CHUNK_EMBEDDING_OVERLAP,
+          chunkSize: 1200, // Hardcoded chunk size
+          overlap: 150, // Hardcoded chunk overlap
         });
         console.log(
           `Saved article: "${article.title}" - Content length: ${
@@ -225,9 +217,8 @@ async function executeDailyOperations() {
       });
     }
   }
-
   newsFetchResults = {
-    queriesProcessed: fetchedArticles.length > 0 ? maxTags : 0,
+    queriesProcessed: fetchedArticles.length > 0 ? -1 : 0, // -1 indicates all tags processed
     articlesFetched: fetchedArticles.length,
     articlesSaved: savedArticles.length,
     articlesAlreadyExisted:

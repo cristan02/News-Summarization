@@ -1,10 +1,6 @@
 import { PrismaClient, Article } from "@prisma/client";
 import { InferenceClient } from "@huggingface/inference";
-import {
-  HUGGINGFACE_EMBEDDING_MODEL,
-  DEFAULT_CHUNK_EMBEDDING_SIZE,
-  DEFAULT_CHUNK_EMBEDDING_OVERLAP,
-} from "@/lib/constants";
+import { HUGGINGFACE_EMBEDDING_MODEL } from "@/lib/constants";
 
 // Initialize clients
 const hf = new InferenceClient(process.env.HUGGINGFACE_API_KEY);
@@ -21,8 +17,8 @@ export interface ChunkProcessResult {
  */
 function recursiveTextSplit(
   text: string,
-  chunkSize: number = DEFAULT_CHUNK_EMBEDDING_SIZE,
-  chunkOverlap: number = DEFAULT_CHUNK_EMBEDDING_OVERLAP
+  chunkSize: number = 1200, // Hardcoded default chunk size
+  chunkOverlap: number = 150 // Hardcoded default chunk overlap
 ): string[] {
   if (!text.trim()) return [];
   if (text.length <= chunkSize) return [text.trim()];
@@ -97,8 +93,8 @@ export async function chunkText(
   options: { chunkSize?: number; overlap?: number } = {}
 ): Promise<string[]> {
   if (!content.trim()) return [];
-  const chunkSize = options.chunkSize ?? DEFAULT_CHUNK_EMBEDDING_SIZE;
-  const overlap = options.overlap ?? DEFAULT_CHUNK_EMBEDDING_OVERLAP;
+  const chunkSize = options.chunkSize ?? 1200; // Hardcoded default chunk size
+  const overlap = options.overlap ?? 150; // Hardcoded default chunk overlap
 
   return recursiveTextSplit(content, chunkSize, overlap);
 }

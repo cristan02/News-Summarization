@@ -44,7 +44,7 @@ export default function Page() {
       });
 
       const result = await response.json();
-      
+
       if (response.ok) {
         setResults(result);
         toast.success('Daily operations completed successfully');
@@ -74,7 +74,7 @@ export default function Page() {
       });
 
       const result = await response.json();
-      
+
       if (response.ok) {
         setResults(result);
         toast.success('All articles and chunks deleted successfully');
@@ -107,7 +107,7 @@ export default function Page() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button 
+            <Button
               onClick={triggerDailyOperations}
               disabled={isLoading}
               className="w-full"
@@ -125,7 +125,7 @@ export default function Page() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button 
+            <Button
               onClick={deleteAllArticles}
               disabled={isDeleting}
               variant="destructive"
@@ -160,7 +160,7 @@ export default function Page() {
         <CardContent className="space-y-3">
           <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
             <span className="font-medium">Daily Operations:</span>
-            <span className="text-muted-foreground">Every day at 2:00 AM UTC</span>
+            <span className="text-muted-foreground">Every day at 1:00 AM UTC</span>
           </div>
           <div className="text-sm text-muted-foreground">
             Includes: News fetching + Cleanup of 7+ day old articles and chunks

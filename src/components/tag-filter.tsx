@@ -83,7 +83,7 @@ export default function TagFilter({
             <Badge
               key={tag}
               variant={selectedTags.includes(tag) ? "default" : "secondary"}
-              className="cursor-pointer hover:bg-secondary/80 text-xs"
+              className={`${selectedTags.includes(tag) ? "hover:bg-primary/80 " : "hover:bg-secondary/80"} cursor-pointer  text-xs`}
               onClick={() =>
                 selectedTags.includes(tag) ? onTagRemove(tag) : onTagSelect(tag)
               }
