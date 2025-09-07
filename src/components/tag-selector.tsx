@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -27,8 +26,8 @@ export function TagSelector({ tags, selectedTags, onTagToggle, className }: TagS
             onClick={() => onTagToggle(tag.name)}
             className={cn(
               "h-auto p-3 text-sm font-medium transition-all duration-200 hover:scale-105",
-              selectedTags.includes(tag.name) 
-                ? "bg-primary text-primary-foreground shadow-md" 
+              selectedTags.includes(tag.name)
+                ? "bg-primary text-primary-foreground shadow-md"
                 : "hover:bg-accent hover:text-accent-foreground"
             )}
           >

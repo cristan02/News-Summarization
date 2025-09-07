@@ -14,13 +14,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { 
-  User, 
-  Settings, 
-  LogOut, 
-  Home, 
-  Newspaper, 
-  Sun, 
+import {
+  User,
+  Settings,
+  LogOut,
+  Home,
+  Newspaper,
+  Sun,
   Moon,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -40,7 +40,7 @@ export function Navbar() {
     try {
       await signOut({ callbackUrl: '/' })
       toast.success('Signed out successfully')
-    } catch (error) {
+    } catch {
       toast.error('Failed to sign out')
     }
   }
@@ -48,7 +48,7 @@ export function Navbar() {
   const toggleTheme = () => {
     // Get the actual current theme (resolve system theme)
     const currentTheme = theme === 'system' ? systemTheme : theme
-    
+
     // Toggle between light and dark only
     if (currentTheme === 'light') {
       setTheme('dark')
@@ -59,10 +59,10 @@ export function Navbar() {
 
   const getCurrentThemeIcon = () => {
     if (!mounted) return <Sun className="h-7 w-7" />
-    
+
     // Always resolve to actual theme (no system icon in toggle)
     const currentTheme = theme === 'system' ? systemTheme : theme
-    
+
     if (currentTheme === 'dark') {
       return <Moon className="h-7 w-7 text-blue-400" />
     } else {
@@ -72,10 +72,10 @@ export function Navbar() {
 
   const getNextThemeLabel = () => {
     if (!mounted) return 'Toggle Theme'
-    
+
     // Always resolve to actual theme
     const currentTheme = theme === 'system' ? systemTheme : theme
-    
+
     if (currentTheme === 'dark') {
       return 'Switch to Light'
     } else {
@@ -105,7 +105,7 @@ export function Navbar() {
 
         {/* Navigation Links */}
         <div className="flex flex-1 items-center space-x-1">
-          <Button 
+          <Button
             variant={isActivePage('/') ? "default" : "ghost"}
             size="sm"
             onClick={() => router.push('/')}
@@ -114,7 +114,7 @@ export function Navbar() {
             <Home className="w-4 h-4 mr-2" />
             Home
           </Button>
-          <Button 
+          <Button
             variant={isActivePage('/feed') ? "default" : "ghost"}
             size="sm"
             onClick={() => router.push('/feed')}
@@ -123,7 +123,7 @@ export function Navbar() {
             <Newspaper className="w-4 h-4 mr-2" />
             My Feed
           </Button>
-          <Button 
+          <Button
             variant={isActivePage('/all-feed') ? "default" : "ghost"}
             size="sm"
             onClick={() => router.push('/all-feed')}
@@ -132,7 +132,7 @@ export function Navbar() {
             <Newspaper className="w-4 h-4 mr-2" />
             All Articles
           </Button>
-          <Button 
+          <Button
             variant={isActivePage('/user-preferences') ? "default" : "ghost"}
             size="sm"
             onClick={() => router.push('/user-preferences')}
@@ -185,31 +185,31 @@ export function Navbar() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            
+
             {/* Mobile Navigation Items */}
             <div className="sm:hidden">
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => router.push('/')}
                 className={isActivePage('/') ? "bg-accent text-accent-foreground" : ""}
               >
                 <Home className="mr-2 h-4 w-4" />
                 Home
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => router.push('/feed')}
                 className={isActivePage('/feed') ? "bg-accent text-accent-foreground" : ""}
               >
                 <Newspaper className="mr-2 h-4 w-4" />
                 My Feed
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => router.push('/all-feed')}
                 className={isActivePage('/all-feed') ? "bg-accent text-accent-foreground" : ""}
               >
                 <Newspaper className="mr-2 h-4 w-4" />
                 All Articles
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => router.push('/user-preferences')}
                 className={isActivePage('/user-preferences') ? "bg-accent text-accent-foreground" : ""}
               >
@@ -218,8 +218,8 @@ export function Navbar() {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
             </div>
-            
-            <DropdownMenuItem 
+
+            <DropdownMenuItem
               onClick={handleSignOut}
               className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
             >

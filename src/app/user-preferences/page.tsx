@@ -18,7 +18,7 @@ interface Tag {
 }
 
 export default function UserPreferences() {
-  const { data: session, status } = useSession()
+  const { status } = useSession()
   const router = useRouter()
   const [tags, setTags] = useState<Tag[]>([])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
@@ -30,7 +30,7 @@ export default function UserPreferences() {
     if (status === 'unauthenticated') {
       router.push('/')
     }
-    
+
     if (status === 'authenticated') {
       fetchTags()
       fetchUserPreferences()
@@ -71,8 +71,8 @@ export default function UserPreferences() {
   }
 
   const handleTagToggle = (tagName: string) => {
-    setSelectedTags(prev => 
-      prev.includes(tagName) 
+    setSelectedTags(prev =>
+      prev.includes(tagName)
         ? prev.filter(t => t !== tagName)
         : [...prev, tagName]
     )
@@ -149,25 +149,25 @@ export default function UserPreferences() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <div className="container mx-auto p-6 space-y-8">
-        
-       
+
+
 
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Tags Selection - Takes up 3 columns */}
 
-           {/* Header Section */}
-        <div className=" space-y-4 lg:col-span-3">
-          <h2 className="text-xl font-semibold text-foreground">Choose Your Interests</h2>
-                <p className="text-muted-foreground">
-                     Select topics that interest you to personalize your news feed. We&apos;ll curate articles 
-                     based on your preferences to ensure you stay informed about what matters most to you.
-                   </p>
-        </div>
+          {/* Header Section */}
+          <div className=" space-y-4 lg:col-span-3">
+            <h2 className="text-xl font-semibold text-foreground">Choose Your Interests</h2>
+            <p className="text-muted-foreground">
+              Select topics that interest you to personalize your news feed. We&apos;ll curate articles
+              based on your preferences to ensure you stay informed about what matters most to you.
+            </p>
+          </div>
 
           <Card className="lg:col-span-3">
             <CardContent className="p-6">
-              <TagSelector 
+              <TagSelector
                 tags={tags}
                 selectedTags={selectedTags}
                 onTagToggle={handleTagToggle}

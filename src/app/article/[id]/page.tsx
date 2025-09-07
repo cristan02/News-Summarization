@@ -26,7 +26,7 @@ import { toast } from "sonner"
 import { Article, ChatMessage } from '@/types'
 
 export default function Page({ params }: { params: Promise<{ id: string }> }) {
-  const { data: session, status } = useSession()
+  const { status } = useSession()
   const router = useRouter()
   const [article, setArticle] = useState<Article | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -54,41 +54,41 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
       router.push('/')
       return
     }
-    
-      const fetchArticle = async () => {
-    setIsLoading(true)
-    try {
-      const response = await fetch(`/api/articles/${articleId}`)
-      if (response.ok) {
-        const result = await response.json()
-        if (result.success && result.data) {
-          setArticle(result.data)
-          
-          // Initialize chat with a welcome message
-          setChatMessages([{
-            id: '1',
-            role: 'assistant',
-            content: `Hello! I'm here to help you discuss this article: "${result.data.title}". Feel free to ask me questions about the content, request summaries, or discuss any aspects of the news story.`,
-            timestamp: new Date().toISOString()
-          }])
+
+    const fetchArticle = async () => {
+      setIsLoading(true)
+      try {
+        const response = await fetch(`/api/articles/${articleId}`)
+        if (response.ok) {
+          const result = await response.json()
+          if (result.success && result.data) {
+            setArticle(result.data)
+
+            // Initialize chat with a welcome message
+            setChatMessages([{
+              id: '1',
+              role: 'assistant',
+              content: `Hello! I'm here to help you discuss this article: "${result.data.title}". Feel free to ask me questions about the content, request summaries, or discuss any aspects of the news story.`,
+              timestamp: new Date().toISOString()
+            }])
+          } else {
+            toast.error(result.error || "Article not found")
+            router.push('/all-feed')
+          }
         } else {
-          toast.error(result.error || "Article not found")
+          const errorResult = await response.json()
+          toast.error(errorResult.error || "Article not found")
           router.push('/all-feed')
         }
-      } else {
-        const errorResult = await response.json()
-        toast.error(errorResult.error || "Article not found")
+      } catch (error) {
+        console.error('Error fetching article:', error)
+        toast.error("Error fetching article")
         router.push('/all-feed')
+      } finally {
+        setIsLoading(false)
       }
-    } catch (error) {
-      console.error('Error fetching article:', error)
-      toast.error("Error fetching article")
-      router.push('/all-feed')
-    } finally {
-      setIsLoading(false)
     }
-  }
-  
+
     if (status === 'authenticated' && articleId) {
       fetchArticle()
     }
@@ -224,8 +224,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
       <div className="container mx-auto p-6 space-y-6">
         {/* Header with Navigation and Actions */}
         <div className="flex items-center justify-between">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => router.push('/all-feed')}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -277,11 +277,11 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                       Ask questions about this article. I&apos;ll search through the content to find relevant information and provide detailed answers.
                     </p>
                   </SheetHeader>
-                  
+
                   {/* Mobile Chat Interface */}
                   <div className="flex-1 flex flex-col mt-6 min-h-0">
                     {/* Chat Messages */}
-                    <div 
+                    <div
                       ref={mobileChatContainerRef}
                       className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2"
                     >
@@ -291,11 +291,10 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                           className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                         >
                           <div
-                            className={`max-w-[85%] rounded-lg p-3 ${
-                              message.role === 'user'
+                            className={`max-w-[85%] rounded-lg p-3 ${message.role === 'user'
                                 ? 'bg-primary text-primary-foreground'
                                 : 'bg-muted'
-                            }`}
+                              }`}
                           >
                             <div className="flex items-center gap-2 mb-1">
                               {message.role === 'user' ? (
@@ -313,7 +312,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                           </div>
                         </div>
                       ))}
-                      
+
                       {isChatLoading && (
                         <div className="flex justify-start">
                           <div className="bg-muted rounded-lg p-3">
@@ -325,7 +324,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                           </div>
                         </div>
                       )}
-                      
+
                       <div ref={mobileChatEndRef} />
                     </div>
 
@@ -339,8 +338,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                         className="flex-1 min-h-[40px] max-h-[100px] resize-none"
                         rows={1}
                       />
-                      <Button 
-                        onClick={sendMessage} 
+                      <Button
+                        onClick={sendMessage}
                         disabled={!newMessage.trim() || isChatLoading}
                         className="h-[40px] w-[40px] p-0"
                       >
@@ -364,7 +363,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <CardTitle className="text-3xl mb-3 leading-tight">{article.title}</CardTitle>
-                    
+
                     {/* Tag and Source Information */}
                     <div className="flex items-center gap-3 mb-2">
                       {article.tag && (
@@ -385,8 +384,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                       )}
                     </div>
                   </div>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => window.open(article.link, '_blank')}
                   >
@@ -394,7 +393,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                     Read Original
                   </Button>
                 </div>
-                
+
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4" />
@@ -415,8 +414,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">Article Content</CardTitle>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => copyToClipboard(article.content)}
                   >
@@ -439,7 +438,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
               </CardContent>
             </Card>
           </div>
-                
+
 
           {/* Fixed Chat Interface - Only visible on large screens */}
           <div className="hidden lg:block w-80 sticky top-6">
@@ -453,10 +452,10 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                   Ask questions for quick, relevant answers.
                 </p>
               </CardHeader>
-              
+
               <CardContent className="flex flex-col h-[calc(100%-4rem)] p-3">
                 {/* Chat Messages */}
-                <div 
+                <div
                   ref={chatContainerRef}
                   className="flex-1 overflow-y-auto space-y-2 mb-3 scrollbar-hide"
                 >
@@ -466,11 +465,10 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                       className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
-                        className={`max-w-[85%] rounded-lg p-2 ${
-                          message.role === 'user'
+                        className={`max-w-[85%] rounded-lg p-2 ${message.role === 'user'
                             ? 'bg-primary text-primary-foreground'
                             : 'bg-muted'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center gap-1 mb-1">
                           {message.role === 'user' ? (
@@ -488,7 +486,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                       </div>
                     </div>
                   ))}
-                  
+
                   {isChatLoading && (
                     <div className="flex justify-start">
                       <div className="bg-muted rounded-lg p-2">
@@ -500,7 +498,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                       </div>
                     </div>
                   )}
-                  
+
                   <div ref={chatEndRef} />
                 </div>
 
@@ -514,8 +512,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                     className="flex-1 min-h-[32px] max-h-[64px] resize-none text-xs"
                     rows={1}
                   />
-                  <Button 
-                    onClick={sendMessage} 
+                  <Button
+                    onClick={sendMessage}
                     disabled={!newMessage.trim() || isChatLoading}
                     className="h-[32px] w-[32px] p-0"
                     size="sm"

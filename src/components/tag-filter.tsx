@@ -13,7 +13,6 @@ interface TagFilterProps {
   onTagRemove: (tag: string) => void;
   onClearAll: () => void;
   showAllTags?: boolean;
-  title?: string;
 }
 
 export default function TagFilter({
@@ -22,8 +21,7 @@ export default function TagFilter({
   onTagSelect,
   onTagRemove,
   onClearAll,
-  showAllTags = false,
-  title = "Filter by Tags"
+  showAllTags = false
 }: TagFilterProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -49,9 +47,9 @@ export default function TagFilter({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-medium text-muted-foreground">Selected ({selectedTags.length})</h4>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onClearAll}
               className="text-xs"
             >
@@ -79,15 +77,14 @@ export default function TagFilter({
         <h4 className="text-sm font-medium text-muted-foreground">
           Available Tags ({filteredTags.length})
         </h4>
-        <div className={`flex flex-wrap gap-1.5 ${
-          !showAllTags ? 'max-h-48 overflow-y-auto' : 'max-h-96 overflow-y-auto'
-        }`}>
+        <div className={`flex flex-wrap gap-1.5 ${!showAllTags ? 'max-h-48 overflow-y-auto' : 'max-h-96 overflow-y-auto'
+          }`}>
           {filteredTags.map((tag) => (
             <Badge
               key={tag}
               variant={selectedTags.includes(tag) ? "default" : "secondary"}
               className="cursor-pointer hover:bg-secondary/80 text-xs"
-              onClick={() => 
+              onClick={() =>
                 selectedTags.includes(tag) ? onTagRemove(tag) : onTagSelect(tag)
               }
             >

@@ -1,8 +1,8 @@
-import { NextAuthOptions } from 'next-auth'
-import { PrismaAdapter } from '@next-auth/prisma-adapter'
-import GithubProvider from 'next-auth/providers/github'
-import GoogleProvider from 'next-auth/providers/google'
-import { prisma } from './prisma'
+import { NextAuthOptions } from "next-auth";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import GithubProvider from "next-auth/providers/github";
+import GoogleProvider from "next-auth/providers/google";
+import { prisma } from "./prisma";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -19,24 +19,24 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
-      return true
+    async signIn() {
+      return true;
     },
     async session({ session, token }) {
       if (session?.user) {
-        session.user.id = token.sub!
+        session.user.id = token.sub!;
       }
-      return session
+      return session;
     },
     async jwt({ token, user }) {
       if (user) {
-        token.uid = user.id
+        token.uid = user.id;
       }
-      return token
+      return token;
     },
   },
   session: {
-    strategy: 'jwt',
+    strategy: "jwt",
   },
-  debug: process.env.NODE_ENV === 'development',
-}
+  debug: process.env.NODE_ENV === "development",
+};

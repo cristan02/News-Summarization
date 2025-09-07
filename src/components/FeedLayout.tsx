@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Loader2, Newspaper, Search, RefreshCw, Settings, User, Menu, X } from "lucide-react"
+import { Loader2, Search, RefreshCw, Settings } from "lucide-react"
 import TagFilter from '@/components/tag-filter'
 import ArticleGrid from '@/components/article-grid'
 import Link from 'next/link'
@@ -20,15 +20,15 @@ interface FeedLayoutProps {
   showPreferencesLink?: boolean
 }
 
-export default function FeedLayout({ 
-  type, 
-  title, 
-  emptyMessage, 
-  showPreferencesLink = false 
+export default function FeedLayout({
+  type,
+  title,
+  emptyMessage,
+  showPreferencesLink = false
 }: FeedLayoutProps) {
   const { isAuthenticated, isLoading: authLoading } = useAuthGuard()
   const [searchQuery, setSearchQuery] = useState('')
-  
+
   const {
     articles,
     isLoading: articlesLoading,
@@ -121,7 +121,6 @@ export default function FeedLayout({
             onTagRemove={handleTagRemove}
             onClearAll={clearAllTags}
             showAllTags={true}
-            title=""
           />
         </div>
       </div>
@@ -133,7 +132,7 @@ export default function FeedLayout({
           <div className="space-y-2">
             <h1 className="text-2xl font-bold">{title}</h1>
             <p className="text-muted-foreground">
-              {type === 'personalized' 
+              {type === 'personalized'
                 ? 'Discover articles tailored to your interests and preferences'
                 : 'Browse all available articles from various sources and topics'
               }
@@ -155,7 +154,7 @@ export default function FeedLayout({
                 />
               </div>
             </div>
-            <Button 
+            <Button
               variant="outline"
               onClick={refreshArticles}
               disabled={articlesLoading}
@@ -180,7 +179,7 @@ export default function FeedLayout({
             articles={filteredArticles}
             title=""
             emptyMessage={
-              searchQuery || selectedFilterTags.length > 0 
+              searchQuery || selectedFilterTags.length > 0
                 ? "No articles match your current filters. Try adjusting your search terms or selected tags."
                 : emptyMessage
             }
