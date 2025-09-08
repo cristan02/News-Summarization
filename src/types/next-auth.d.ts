@@ -10,3 +10,5 @@ declare module "next-auth" {
     };
   }
 }
+
+export default NextAuth;

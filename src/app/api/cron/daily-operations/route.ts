@@ -151,19 +151,61 @@ async function executeDailyOperations() {
 
   console.log(`Fetched ${fetchedArticles.length} articles total`);
 
-  // Save articles to database
+  // Log detailed breakdown of fetched articles by tag
+  if (fetchedArticles.length > 0) {
+    console.log("📋 Articles fetched breakdown by tag:");
+    const articlesByTag = fetchedArticles.reduce((acc, article) => {
+      acc[article.tag] = (acc[article.tag] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    Object.entries(articlesByTag).forEach(([tag, count]) => {
+      console.log(`   ${tag}: ${count} articles`);
+    });
+
+    console.log("📋 All fetched articles:");
+    fetchedArticles.forEach((article, idx) => {
+      console.log(
+        `   ${idx + 1}. "${article.title}" (Tag: ${article.tag}, Source: ${
+          article.source
+        })`
+      );
+    });
+  }
+
+  // Get the actual number of tags processed for reporting
+  const tagsFromDB = await prisma.tag.count();
+
+  // Save articles to database with rate limiting
   const savedArticles = [];
   const errors = [];
 
-  for (const article of fetchedArticles) {
+  console.log(
+    `Processing ${fetchedArticles.length} articles with rate limiting...`
+  );
+
+  for (let i = 0; i < fetchedArticles.length; i++) {
+    const article = fetchedArticles[i];
+
     try {
+      console.log(
+        `🔄 Processing article ${i + 1}/${fetchedArticles.length}: "${
+          article.title
+        }"`
+      );
+      console.log(`   Tag: ${article.tag}`);
+      console.log(`   Source: ${article.source}`);
+      console.log(`   URL: ${article.link}`);
+
       // Check if article already exists
       const existingArticle = await prisma.article.findUnique({
         where: { link: article.link },
       });
 
       if (existingArticle) {
-        console.log(`Article already exists: ${article.title}`);
+        console.log(
+          `⏭️ Article already exists in database: "${article.title}" (Tag: ${article.tag})`
+        );
         continue;
       }
 
@@ -176,6 +218,10 @@ async function executeDailyOperations() {
           usageCount: 1,
         },
       });
+
+      console.log(
+        `💾 Saving new article: "${article.title}" (Tag: ${article.tag})`
+      );
 
       // Save article
       const savedArticle = await prisma.article.create({
@@ -192,33 +238,58 @@ async function executeDailyOperations() {
         },
       });
 
-      // Generate chunks & embeddings
+      console.log(
+        `✅ Article saved successfully: "${article.title}" (ID: ${savedArticle.id}, Tag: ${article.tag})`
+      );
+
+      // Generate chunks & embeddings with retry on failure
       try {
+        console.log(
+          `Generating chunks and embeddings for article: ${article.title}`
+        );
         const chunkResult = await ensureArticleChunks(prisma, savedArticle, {
           chunkSize: 1200, // Hardcoded chunk size
           overlap: 150, // Hardcoded chunk overlap
         });
+
         console.log(
-          `Saved article: "${article.title}" - Content length: ${
-            article.content?.length || 0
-          } chars; Chunks created: ${chunkResult.created}${
-            chunkResult.skippedExisting ? " (skipped existing)" : ""
-          }`
+          `✅ Article processed successfully: ${chunkResult.created} chunks created for "${article.title}"`
         );
-      } catch (chunkErr) {
-        console.error(`Failed chunking article "${article.title}":`, chunkErr);
+        savedArticles.push(savedArticle);
+      } catch (chunkError) {
+        console.error(
+          `❌ Failed to create chunks for article "${article.title}":`,
+          chunkError
+        );
+        // Save the article anyway, just without chunks/embeddings
+        savedArticles.push(savedArticle);
+        errors.push({
+          article: article.title,
+          error: "Chunk generation failed",
+          details:
+            chunkError instanceof Error
+              ? chunkError.message
+              : String(chunkError),
+        });
       }
-      savedArticles.push(savedArticle);
+
+      // Add delay between processing articles to avoid overwhelming HuggingFace API
+      if (i < fetchedArticles.length - 1) {
+        console.log("Waiting 2 seconds before processing next article...");
+        await new Promise((resolve) => setTimeout(resolve, 2000)); // 2 second delay
+      }
     } catch (error) {
-      console.error(`Error saving article "${article.title}":`, error);
+      console.error(`Failed to save article "${article.title}":`, error);
       errors.push({
-        title: article.title,
-        error: error instanceof Error ? error.message : "Unknown error",
+        article: article.title,
+        error: "Article save failed",
+        details: error instanceof Error ? error.message : String(error),
       });
     }
   }
+
   newsFetchResults = {
-    queriesProcessed: fetchedArticles.length > 0 ? -1 : 0, // -1 indicates all tags processed
+    queriesProcessed: fetchedArticles.length > 0 ? tagsFromDB : 0, // Show actual number of tags processed
     articlesFetched: fetchedArticles.length,
     articlesSaved: savedArticles.length,
     articlesAlreadyExisted:

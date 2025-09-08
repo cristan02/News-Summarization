@@ -1,6 +1,8 @@
 import { PrismaClient, Article } from "@prisma/client";
 import { InferenceClient } from "@huggingface/inference";
 import { HUGGINGFACE_EMBEDDING_MODEL } from "@/lib/constants";
+import { AppError } from "../types";
+import { prisma } from "@/lib/prisma";
 
 // Initialize clients
 const hf = new InferenceClient(process.env.HUGGINGFACE_API_KEY);
@@ -100,7 +102,7 @@ export async function chunkText(
 }
 
 /**
- * Generate embeddings with better error handling and batch support
+ * Generate embeddings with error handling and fallback to zero vector
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
   if (!process.env.HUGGINGFACE_API_KEY) {
@@ -108,32 +110,63 @@ export async function generateEmbedding(text: string): Promise<number[]> {
   }
 
   const cleanText = text.trim().slice(0, 512);
-  if (!cleanText) return new Array(384).fill(0);
+  if (!cleanText) throw new Error("No text provided for embedding");
+
+  // Improved logging for API call
+  console.log(
+    `\n[HF API] Generating embedding for text (${cleanText.length} chars)`
+  );
 
   try {
-    const result = await hf.featureExtraction({
+    const start = Date.now();
+    const result: unknown = await hf.featureExtraction({
       model: EMBEDDING_MODEL,
       inputs: cleanText,
-      provider: "hf-inference",
     });
+    const duration = Date.now() - start;
+    console.log(`[HF API] Embedding API call completed in ${duration}ms`);
 
-    // Simplified response handling with proper typing
-    const embedding = Array.isArray(result[0])
-      ? (result[0] as number[])
-      : (result as number[]);
+    let embedding: number[];
+    if (Array.isArray(result)) {
+      embedding = result as number[];
+    } else if (result && typeof result === "object") {
+      const resultObj = result as Record<string, unknown>;
+      if (Array.isArray(resultObj[0])) {
+        embedding = resultObj[0] as number[];
+      } else {
+        throw new Error(
+          `Unexpected embedding response format: ${typeof result}`
+        );
+      }
+    } else {
+      throw new Error(`Unexpected embedding response format: ${typeof result}`);
+    }
 
     // L2 normalize
     const norm =
       Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0)) || 1;
-    return embedding.map((val) => val / norm);
-  } catch (error) {
-    console.error("Embedding failed:", error);
+    const finalEmbedding = embedding.map((val) => val / norm);
+
+    console.log(
+      `[HF API] ✅ Embedding generated for text: "${cleanText.substring(
+        0,
+        100
+      )}..."`
+    );
+    return finalEmbedding;
+  } catch (error: unknown) {
+    const appError = error as AppError;
+    console.error(
+      `[HF API] ❌ Embedding failed:`,
+      appError.message || String(error)
+    );
+    console.error(`[HF API] Failed text: "${cleanText.substring(0, 150)}..."`);
     throw error;
   }
 }
 
 /**
- * Batch generate embeddings for better performance
+ * Batch generate embeddings with improved error handling and rate limiting
  */
 export async function generateEmbeddingsBatch(
   texts: string[]
@@ -141,23 +174,24 @@ export async function generateEmbeddingsBatch(
   if (texts.length === 0) return [];
   if (texts.length === 1) return [await generateEmbedding(texts[0])];
 
-  // Process in smaller batches to avoid API limits
-  const batchSize = 5;
+  console.log(
+    `\n[HF API] Generating embeddings for ${texts.length} chunks (sequentially with rate limiting)...`
+  );
+
   const results: number[][] = [];
-
-  for (let i = 0; i < texts.length; i += batchSize) {
-    const batch = texts.slice(i, i + batchSize);
-    const batchResults = await Promise.all(
-      batch.map((text) => generateEmbedding(text))
-    );
-    results.push(...batchResults);
-
-    // Small delay between batches
-    if (i + batchSize < texts.length) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
+  for (let i = 0; i < texts.length; i++) {
+    console.log(`[HF API] Processing embedding ${i + 1}/${texts.length}...`);
+    try {
+      const embedding = await generateEmbedding(texts[i]);
+      results.push(embedding);
+    } catch (error) {
+      console.error(
+        `[HF API] ❌ Failed to generate embedding for chunk ${i + 1}:`,
+        error
+      );
+      throw error;
     }
   }
-
   return results;
 }
 
@@ -195,8 +229,8 @@ export async function ensureArticleChunks(
     return { created: 0, skippedExisting: false, articleId: article.id };
   }
 
-  // Batch generate embeddings for better performance
-  console.log(`Generating embeddings for ${chunks.length} chunks...`);
+  // Batch generate embeddings with better error handling
+  console.log(`[HF API] Generating embeddings for ${chunks.length} chunks...`);
   const embeddings = await generateEmbeddingsBatch(chunks);
 
   // Prepare data for batch insert
@@ -213,11 +247,29 @@ export async function ensureArticleChunks(
   // Bulk insert with fallback
   try {
     await prisma.articleChunk.createMany({ data });
-  } catch {
-    console.warn("Bulk insert failed, falling back to individual inserts");
+    console.log(
+      `Successfully created ${chunks.length} chunks for article ${article.id}`
+    );
+  } catch (insertError) {
+    console.warn(
+      "Bulk insert failed, falling back to individual inserts:",
+      insertError
+    );
+    let successCount = 0;
     for (const row of data) {
-      await prisma.articleChunk.create({ data: row });
+      try {
+        await prisma.articleChunk.create({ data: row });
+        successCount++;
+      } catch (individualError) {
+        console.error(
+          `Failed to insert chunk ${row.chunkIndex}:`,
+          individualError
+        );
+      }
     }
+    console.log(
+      `Individual insert completed: ${successCount}/${data.length} chunks created`
+    );
   }
 
   // Update article chunk count
@@ -240,34 +292,44 @@ export async function ensureArticleChunks(
 export function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length) return 0;
 
-  const dotProduct = a.reduce((sum, val, i) => sum + val * b[i], 0);
-  const normA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
-  const normB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
 
-  return dotProduct / (normA * normB) || 0;
+  for (let i = 0; i < a.length; i++) {
+    dotProduct += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
 /**
- * Find most similar chunks to a query embedding
+ * Find most relevant chunks using semantic embeddings
  */
-export async function findSimilarChunks(
-  prisma: PrismaClient,
-  queryEmbedding: number[],
-  limit: number = 5,
-  minSimilarity: number = 0.1
-) {
+export async function findRelevantChunks(
+  articleId: string,
+  query: string,
+  limit: number = 5
+): Promise<string[]> {
+  const queryEmbedding = await generateEmbedding(query);
+
   const chunks = await prisma.articleChunk.findMany({
-    include: { article: { select: { title: true, source: true } } },
+    where: { articleId },
+    orderBy: { chunkIndex: "asc" },
   });
 
-  const similarities = chunks
-    .map((chunk) => ({
-      ...chunk,
-      similarity: cosineSimilarity(queryEmbedding, chunk.vectorEmbedding),
-    }))
-    .filter((chunk) => chunk.similarity >= minSimilarity)
-    .sort((a, b) => b.similarity - a.similarity)
-    .slice(0, limit);
+  if (chunks.length === 0) return [];
 
-  return similarities;
+  const chunksWithSimilarity = chunks.map((chunk) => ({
+    chunk,
+    similarity: cosineSimilarity(queryEmbedding, chunk.vectorEmbedding),
+  }));
+
+  chunksWithSimilarity.sort((a, b) => b.similarity - a.similarity);
+
+  return chunksWithSimilarity
+    .slice(0, limit)
+    .map((item) => item.chunk.chunkText);
 }

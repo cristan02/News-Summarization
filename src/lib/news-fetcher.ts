@@ -9,13 +9,13 @@ import {
   DEFAULT_SUMMARY_MAX_LENGTH,
   DEFAULT_SUMMARY_MIN_LENGTH,
   DEFAULT_ARTICLES_PER_TAG,
+  GNEWS_API_URL,
+  NEWSAPI_URL,
 } from "@/lib/constants";
 
 const hf = new InferenceClient(process.env.HUGGINGFACE_API_KEY);
 
-// API endpoints and keys
-const GNEWS_API_URL = "https://gnews.io/api/v4/search";
-const NEWSAPI_URL = "https://newsapi.org/v2/everything";
+// API Keys
 const GNEWS_API_KEY = process.env.GNEWS_API_KEY;
 const NEWSAPI_KEY = process.env.NEWS_API_KEY;
 
@@ -33,6 +33,7 @@ async function scrapeArticleContent(url: string): Promise<string> {
 
     if (!response.ok) return "";
 
+    console.log(`🕸️ Scraping article content from: ${url}`);
     const html = await response.text();
     const dom = new JSDOM(html);
     const document = dom.window.document;
@@ -94,13 +95,21 @@ async function scrapeArticleContent(url: string): Promise<string> {
 /**
  * Generate summary using Hugging Face
  */
-async function generateSummary(content: string): Promise<string | null> {
+async function generateSummary(
+  content: string,
+  title: string
+): Promise<string | null> {
   if (!process.env.HUGGINGFACE_API_KEY || !content) {
     return null;
   }
 
+  let contentSize = 0;
   try {
     const cleanContent = content.replace(/[^\w\s.,!?]/g, "").slice(0, 2000);
+    contentSize = cleanContent.length;
+    console.log(
+      `\nGenerating summary for article "${title}" (${contentSize} chars)`
+    );
 
     const result = await hf.summarization({
       model: HUGGINGFACE_SUMMARY_MODEL,
@@ -109,15 +118,16 @@ async function generateSummary(content: string): Promise<string | null> {
         max_length: DEFAULT_SUMMARY_MAX_LENGTH,
         min_length: DEFAULT_SUMMARY_MIN_LENGTH,
       },
-      provider: "hf-inference",
+      provider: "hf-inference", // Corrected provider
     });
-
+    console.log("Summary Generated from Hugging face for article ", title);
     return result.summary_text || null;
   } catch (error) {
     console.warn(
       "Summary generation failed, no fallback available",
       (error as Error)?.message
     );
+    console.error("Failed content length: ", contentSize);
     return null;
   }
 }
@@ -132,12 +142,18 @@ async function fetchFromGNews(
   if (!GNEWS_API_KEY) throw new Error("GNews API key missing");
 
   try {
+    const now = new Date();
+    const oneDayAgo = new Date();
+    oneDayAgo.setDate(now.getDate() - 1);
+
     const url = new URL(GNEWS_API_URL);
     url.searchParams.append("q", query);
     url.searchParams.append("lang", "en");
     url.searchParams.append("max", limit.toString());
     url.searchParams.append("sortby", "relevance");
     url.searchParams.append("apikey", GNEWS_API_KEY);
+    url.searchParams.append("from", oneDayAgo.toISOString());
+    url.searchParams.append("to", now.toISOString());
 
     const response = await fetch(url.toString());
 
@@ -169,9 +185,9 @@ async function fetchFromGNews(
         article.content ||
         article.description ||
         "";
-      const summary = await generateSummary(content);
+      const summary = await generateSummary(content, article.title);
 
-      // Skip articles without proper summaries
+      // Corrected Logic: Skip articles without proper summaries
       if (!summary) {
         console.log(
           `⏭️ Skipping article "${article.title}" - no summary generated`
@@ -184,15 +200,12 @@ async function fetchFromGNews(
         link: article.url,
         content,
         summary,
-        tag: query, // Use the search query as the tag since articles are fetched by tag
+        tag: query,
         source: "GNews",
         author: article.source?.name || "Unknown",
         publishedAt: new Date(article.publishedAt),
         imageUrl: article.image,
       });
-
-      // Rate limiting
-      await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
     return articles;
@@ -250,9 +263,9 @@ async function fetchFromNewsAPI(
     for (const article of validArticles) {
       const content =
         (await scrapeArticleContent(article.url)) || article.content || "";
-      const summary = await generateSummary(content);
+      const summary = await generateSummary(content, article.title);
 
-      // Skip articles without proper summaries
+      // Corrected Logic: Skip articles without proper summaries
       if (!summary) {
         console.log(
           `⏭️ Skipping article "${article.title}" - no summary generated`
@@ -265,7 +278,7 @@ async function fetchFromNewsAPI(
         link: article.url,
         content,
         summary,
-        tag: query, // Use the search query as the tag since articles are fetched by tag
+        tag: query,
         source: "NewsAPI",
         author: article.author || article.source?.name || "Unknown",
         publishedAt: new Date(article.publishedAt),
@@ -358,22 +371,4 @@ export async function fetchArticlesWithFallback(
     `🎯 Total articles fetched: ${allArticles.length} from ${tagNames.length} tags`
   );
   return allArticles;
-}
-
-// Export legacy functions for backward compatibility
-export const scrapeFullArticleContent = scrapeArticleContent;
-export const generateSummaryWithHuggingFace = generateSummary;
-export { fetchFromGNews, fetchFromNewsAPI };
-
-// Legacy function for backward compatibility - now just calls the main function
-export async function fetchArticlesForQueries(
-  queries: string[],
-  articlesPerQuery: number = 2
-): Promise<ExternalNewsArticle[]> {
-  console.log(
-    "⚠️ Warning: fetchArticlesForQueries is deprecated. Use fetchArticlesWithFallback() instead."
-  );
-  // This is a simplified compatibility function - it won't use the queries parameter
-  // since the new function gets tags from the database
-  return fetchArticlesWithFallback(articlesPerQuery);
 }
