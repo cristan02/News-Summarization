@@ -1,4 +1,4 @@
-import FeedLayout from '@/components/FeedLayout'
+import FeedLayout from '@/components/feed-layout'
 
 export default function Page() {
   return (

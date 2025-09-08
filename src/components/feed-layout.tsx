@@ -38,10 +38,9 @@ export default function FeedLayout({
   } = useArticles({ filterByPreferences: type === 'personalized' })
 
   // Memoize user preferred tags to prevent unnecessary re-renders
-  const preferredTagsString = userPreferences?.preferredTags ? JSON.stringify(userPreferences.preferredTags) : '';
   const memoizedUserPreferredTags = useMemo(() =>
     userPreferences?.preferredTags || [],
-    [userPreferences?.preferredTags, preferredTagsString]
+    [userPreferences?.preferredTags]
   );
 
   const {

@@ -1,10 +1,8 @@
 import { PrismaClient, Article } from "@prisma/client";
 import { InferenceClient } from "@huggingface/inference";
-import {
-  HUGGINGFACE_EMBEDDING_MODEL,
-  HUGGINGFACE_API_TIMEOUT,
-} from "@/lib/constants";
-import { AppError, HuggingFaceResponse } from "../types";
+import { HUGGINGFACE_EMBEDDING_MODEL } from "@/lib/constants";
+import { AppError } from "../types";
+import { prisma } from "@/lib/prisma";
 
 // Initialize clients
 const hf = new InferenceClient(process.env.HUGGINGFACE_API_KEY);
@@ -104,46 +102,34 @@ export async function chunkText(
 }
 
 /**
- * Sleep utility for delays
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
  * Generate embeddings with error handling and fallback to zero vector
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
   if (!process.env.HUGGINGFACE_API_KEY) {
-    console.warn("Hugging Face API key not configured, returning zero vector");
-    return new Array(384).fill(0);
+    throw new Error("Hugging Face API key not configured");
   }
 
   const cleanText = text.trim().slice(0, 512);
-  if (!cleanText) return new Array(384).fill(0);
+  if (!cleanText) throw new Error("No text provided for embedding");
 
-  // Log the text being processed for debugging
+  // Improved logging for API call
   console.log(
-    `🔤 Attempting to generate embedding for text (${cleanText.length} chars):`
-  );
-  console.log(
-    `"${cleanText.substring(0, 200)}${cleanText.length > 200 ? "..." : ""}"`
+    `\n[HF API] Generating embedding for text (${cleanText.length} chars)`
   );
 
   try {
-    // Use the latest HuggingFace Inference API pattern without custom timeout
-    // The library handles timeouts internally
+    const start = Date.now();
     const result: unknown = await hf.featureExtraction({
       model: EMBEDDING_MODEL,
       inputs: cleanText,
     });
+    const duration = Date.now() - start;
+    console.log(`[HF API] Embedding API call completed in ${duration}ms`);
 
-    // Handle the latest HuggingFace Inference library response format
     let embedding: number[];
     if (Array.isArray(result)) {
       embedding = result as number[];
     } else if (result && typeof result === "object") {
-      // Check if it's an object with array properties (like { "0": [...] })
       const resultObj = result as Record<string, unknown>;
       if (Array.isArray(resultObj[0])) {
         embedding = resultObj[0] as number[];
@@ -162,7 +148,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     const finalEmbedding = embedding.map((val) => val / norm);
 
     console.log(
-      `✅ Embedding generated successfully for text: "${cleanText.substring(
+      `[HF API] ✅ Embedding generated for text: "${cleanText.substring(
         0,
         100
       )}..."`
@@ -170,16 +156,12 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     return finalEmbedding;
   } catch (error: unknown) {
     const appError = error as AppError;
-    console.error(`❌ Embedding failed:`, appError.message || String(error));
-    console.error(`🔤 Failed text: "${cleanText.substring(0, 150)}..."`);
-
-    // No retries - fail immediately and return zero vector as fallback
-    console.warn(`❌ Embedding attempt failed - using zero vector fallback.`);
-    console.warn(
-      `📝 Problematic text (${cleanText.length} chars): "${cleanText}"`
+    console.error(
+      `[HF API] ❌ Embedding failed:`,
+      appError.message || String(error)
     );
-    console.warn(`🔧 Using zero vector fallback.`);
-    return new Array(384).fill(0);
+    console.error(`[HF API] Failed text: "${cleanText.substring(0, 150)}..."`);
+    throw error;
   }
 }
 
@@ -193,46 +175,23 @@ export async function generateEmbeddingsBatch(
   if (texts.length === 1) return [await generateEmbedding(texts[0])];
 
   console.log(
-    `Generating embeddings for ${texts.length} chunks with rate limiting...`
+    `\n[HF API] Generating embeddings for ${texts.length} chunks (sequentially with rate limiting)...`
   );
 
-  // Process sequentially to avoid overwhelming the API
   const results: number[][] = [];
-  let consecutiveFailures = 0;
-  const maxConsecutiveFailures = 3; // Circuit breaker threshold
-
   for (let i = 0; i < texts.length; i++) {
-    console.log(`Processing embedding ${i + 1}/${texts.length}...`);
-
-    // Circuit breaker: stop if too many consecutive failures
-    if (consecutiveFailures >= maxConsecutiveFailures) {
-      console.warn(
-        `Circuit breaker activated: ${maxConsecutiveFailures} consecutive embedding failures. Using zero vectors for remaining chunks.`
-      );
-      // Fill remaining with zero vectors
-      for (let j = i; j < texts.length; j++) {
-        results.push(new Array(384).fill(0));
-      }
-      break;
-    }
-
+    console.log(`[HF API] Processing embedding ${i + 1}/${texts.length}...`);
     try {
       const embedding = await generateEmbedding(texts[i]);
       results.push(embedding);
-      consecutiveFailures = 0; // Reset counter on success
-
-      // Add delay between API calls to respect rate limits
-      if (i < texts.length - 1) {
-        await sleep(500); // 500ms delay between calls
-      }
     } catch (error) {
-      console.error(`Failed to generate embedding for chunk ${i + 1}:`, error);
-      consecutiveFailures++;
-      // Use zero vector as fallback
-      results.push(new Array(384).fill(0));
+      console.error(
+        `[HF API] ❌ Failed to generate embedding for chunk ${i + 1}:`,
+        error
+      );
+      throw error;
     }
   }
-
   return results;
 }
 
@@ -271,16 +230,8 @@ export async function ensureArticleChunks(
   }
 
   // Batch generate embeddings with better error handling
-  console.log(`Generating embeddings for ${chunks.length} chunks...`);
-  let embeddings: number[][];
-
-  try {
-    embeddings = await generateEmbeddingsBatch(chunks);
-  } catch (error) {
-    console.error("Batch embedding generation failed, using fallback:", error);
-    // Create zero vectors as fallback
-    embeddings = chunks.map(() => new Array(384).fill(0));
-  }
+  console.log(`[HF API] Generating embeddings for ${chunks.length} chunks...`);
+  const embeddings = await generateEmbeddingsBatch(chunks);
 
   // Prepare data for batch insert
   const now = new Date();
@@ -341,34 +292,44 @@ export async function ensureArticleChunks(
 export function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length) return 0;
 
-  const dotProduct = a.reduce((sum, val, i) => sum + val * b[i], 0);
-  const normA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
-  const normB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
 
-  return dotProduct / (normA * normB) || 0;
+  for (let i = 0; i < a.length; i++) {
+    dotProduct += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
 /**
- * Find most similar chunks to a query embedding
+ * Find most relevant chunks using semantic embeddings
  */
-export async function findSimilarChunks(
-  prisma: PrismaClient,
-  queryEmbedding: number[],
-  limit: number = 5,
-  minSimilarity: number = 0.1
-) {
+export async function findRelevantChunks(
+  articleId: string,
+  query: string,
+  limit: number = 5
+): Promise<string[]> {
+  const queryEmbedding = await generateEmbedding(query);
+
   const chunks = await prisma.articleChunk.findMany({
-    include: { article: { select: { title: true, source: true } } },
+    where: { articleId },
+    orderBy: { chunkIndex: "asc" },
   });
 
-  const similarities = chunks
-    .map((chunk) => ({
-      ...chunk,
-      similarity: cosineSimilarity(queryEmbedding, chunk.vectorEmbedding),
-    }))
-    .filter((chunk) => chunk.similarity >= minSimilarity)
-    .sort((a, b) => b.similarity - a.similarity)
-    .slice(0, limit);
+  if (chunks.length === 0) return [];
 
-  return similarities;
+  const chunksWithSimilarity = chunks.map((chunk) => ({
+    chunk,
+    similarity: cosineSimilarity(queryEmbedding, chunk.vectorEmbedding),
+  }));
+
+  chunksWithSimilarity.sort((a, b) => b.similarity - a.similarity);
+
+  return chunksWithSimilarity
+    .slice(0, limit)
+    .map((item) => item.chunk.chunkText);
 }

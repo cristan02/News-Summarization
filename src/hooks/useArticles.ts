@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { Article, UserPreferences } from "@/types";
 
@@ -85,15 +85,6 @@ export function useArticles(options: UseArticlesOptions = {}) {
       await fetchArticles();
     }
   }, [options.filterByPreferences, fetchUserPreferences, fetchArticles]);
-
-  // Memoize user preferred tags to prevent unnecessary re-renders
-  const memoizedPreferredTags = useMemo(
-    () =>
-      userPreferences?.preferredTags
-        ? JSON.stringify(userPreferences.preferredTags)
-        : "",
-    [userPreferences?.preferredTags]
-  );
 
   const refreshArticles = useCallback(() => {
     if (

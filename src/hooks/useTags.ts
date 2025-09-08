@@ -18,10 +18,9 @@ export function useTags(options: UseTagsOptions = {}) {
   const [isLoading, setIsLoading] = useState(false);
 
   // Memoize userPreferredTags to prevent unnecessary re-renders
-  const userPreferredTagsString = JSON.stringify(userPreferredTags);
   const memoizedUserPreferredTags = useMemo(
     () => userPreferredTags,
-    [userPreferredTags, userPreferredTagsString]
+    [userPreferredTags]
   );
 
   const fetchAvailableTags = useCallback(async () => {
