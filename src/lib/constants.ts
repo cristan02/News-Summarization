@@ -7,6 +7,8 @@ export const DEFAULT_GNEWS_RATE_LIMIT = 100; // requests/day
 export const DEFAULT_NEWSAPI_RATE_LIMIT = 100; // requests/day
 
 export const HUGGINGFACE_SUMMARY_MODEL = "facebook/bart-large-cnn";
+// export const HUGGINGFACE_SUMMARY_MODEL = "AndreLiu1225/t5-news-summarizer";
+
 export const DEFAULT_SUMMARY_MAX_LENGTH = 150;
 export const DEFAULT_SUMMARY_MIN_LENGTH = 50;
 export const DEFAULT_ARTICLES_PER_TAG = 5;
